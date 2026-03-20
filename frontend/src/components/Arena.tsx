@@ -115,9 +115,10 @@ export default function Arena({ onReveal }: { onReveal: (data: any) => void }) {
 
     if (!hasStarted) {
         return (
-            <div className="flex justify-center items-center h-full">
-                <button onClick={startBattle} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-2xl text-2xl font-black tracking-widest transition-all transform hover:scale-105 shadow-2xl shadow-purple-500/30">
-                    ⚔️ ENTER THE ARENA
+            <div className="flex justify-center items-center h-full mt-20">
+                <button onClick={startBattle} className="relative group px-12 py-6 bg-cyber-dark border-2 border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white text-3xl font-display font-black tracking-widest uppercase transition-all duration-300 overflow-hidden shadow-cyber-pink">
+                    <span className="relative z-10 animate-pulse">INITIATE SEQUENCE</span>
+                    <div className="absolute inset-0 bg-neon-gradient transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left opacity-80"></div>
                 </button>
             </div>
         );
@@ -125,71 +126,77 @@ export default function Arena({ onReveal }: { onReveal: (data: any) => void }) {
 
     return (
         <div className="flex flex-col h-full space-y-6 animate-fade-in pt-4">
-            <div className="text-center bg-gray-900/50 backdrop-blur border border-gray-800 p-3 rounded-xl text-sm font-semibold text-gray-400">
-                <span className="text-white font-bold mr-2">Round {turn} / 3</span>|
-                <span className="ml-2 italic opacity-80">⚖️ Please ignore speed and formatting. Vote purely on logic, accuracy, and usefulness.</span>
+            <div className="text-center glass-panel p-3 rounded-lg text-sm font-mono tracking-widest text-cyber-blue flex justify-center items-center space-x-4 border-l-4 border-l-cyber-pink">
+                <span className="text-white font-bold bg-cyber-pink px-2 py-1 text-xs">CYCLE {turn} / 3</span>
+                <span className="opacity-80 uppercase">Ignore speed/format. Evaluate logic, accuracy & utility.</span>
             </div>
 
-            <div className="flex-1 grid grid-cols-2 gap-6 min-h-[400px]">
+            <div className="flex-1 grid grid-cols-2 gap-8 min-h-[400px]">
                 {/* Model A */}
-                <div className="bg-gray-900 rounded-2xl border border-gray-800 flex flex-col shadow-xl overflow-hidden relative group">
-                    <div className="bg-gradient-to-r from-blue-900/40 to-transparent p-4 border-b border-gray-800">
-                        <h2 className="text-lg font-bold text-blue-400 uppercase tracking-widest">Model A</h2>
+                <div className="glass-panel rounded-xl flex flex-col shadow-cyber-blue overflow-hidden relative group border-t-4 border-t-cyber-blue">
+                    <div className="bg-cyber-blue/10 p-3 border-b border-cyber-blue/30 flex justify-between items-center">
+                        <h2 className="text-sm font-mono font-bold text-cyber-blue uppercase tracking-[0.3em]">Entity Alpha</h2>
+                        <div className="w-2 h-2 rounded-full bg-cyber-blue animate-pulse"></div>
                     </div>
-                    <div className="flex-1 overflow-auto p-6 whitespace-pre-wrap text-gray-300 font-mono text-base leading-relaxed" ref={textARef}>
-                        Waiting for your prompt...
+                    <div className="flex-1 overflow-auto p-6 whitespace-pre-wrap text-gray-300 font-mono text-sm leading-relaxed" ref={textARef}>
+                        Waiting for prompt...
                     </div>
                     {isAwaitingVote && (
-                        <button onClick={() => handleVote("left")} className="absolute bottom-4 left-4 right-4 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold uppercase tracking-wider transition-all transform hover:translate-y-[-2px] shadow-lg shadow-blue-900/50">
-                            👈 Choose Model A
-                        </button>
+                        <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-cyber-dark to-transparent">
+                            <button onClick={() => handleVote("left")} className="w-full py-4 bg-cyber-dark border border-cyber-blue text-cyber-blue hover:bg-cyber-blue hover:text-cyber-dark font-mono font-bold tracking-widest uppercase transition-all shadow-[0_0_15px_#00f0ff] animate-pulse">
+                                &lt; SELECT ALPHA &gt;
+                            </button>
+                        </div>
                     )}
                 </div>
 
                 {/* Model B */}
-                <div className="bg-gray-900 rounded-2xl border border-gray-800 flex flex-col shadow-xl overflow-hidden relative group">
-                    <div className="bg-gradient-to-l from-purple-900/40 to-transparent p-4 border-b border-gray-800 text-right">
-                        <h2 className="text-lg font-bold text-purple-400 uppercase tracking-widest">Model B</h2>
+                <div className="glass-panel rounded-xl flex flex-col shadow-cyber-pink overflow-hidden relative group border-t-4 border-t-cyber-pink">
+                    <div className="bg-cyber-pink/10 p-3 border-b border-cyber-pink/30 flex justify-between items-center">
+                        <div className="w-2 h-2 rounded-full bg-cyber-pink animate-pulse"></div>
+                        <h2 className="text-sm font-mono font-bold text-cyber-pink uppercase tracking-[0.3em]">Entity Beta</h2>
                     </div>
-                    <div className="flex-1 overflow-auto p-6 whitespace-pre-wrap text-gray-300 font-mono text-base leading-relaxed" ref={textBRef}>
-                        Waiting for your prompt...
+                    <div className="flex-1 overflow-auto p-6 whitespace-pre-wrap text-gray-300 font-mono text-sm leading-relaxed" ref={textBRef}>
+                        Waiting for prompt...
                     </div>
                     {isAwaitingVote && (
-                        <button onClick={() => handleVote("right")} className="absolute bottom-4 left-4 right-4 py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold uppercase tracking-wider transition-all transform hover:translate-y-[-2px] shadow-lg shadow-purple-900/50">
-                            Choose Model B 👉
-                        </button>
+                        <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-cyber-dark to-transparent">
+                            <button onClick={() => handleVote("right")} className="w-full py-4 bg-cyber-dark border border-cyber-pink text-cyber-pink hover:bg-cyber-pink hover:text-white font-mono font-bold tracking-widest uppercase transition-all shadow-[0_0_15px_#ff003c] animate-pulse">
+                                &lt; SELECT BETA &gt;
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
 
             <div className={`flex justify-center flex-col items-center space-y-4 transition-opacity duration-500 ${isAwaitingVote ? 'opacity-100' : 'opacity-0 pointer-events-none hidden'}`}>
-                <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Or choose a tie:</div>
-                <div className="flex justify-center space-x-6">
-                    <button onClick={() => handleVote("both_good")} className="px-8 py-3 bg-gray-800 hover:bg-green-600 focus:bg-green-600 text-gray-300 hover:text-white rounded-xl font-bold transition-all border border-gray-700 hover:border-transparent cursor-pointer">
-                        🤝 Both Outstanding
+                <div className="text-cyber-yellow text-xs font-mono font-bold uppercase tracking-[0.3em]">Analyze Outliers:</div>
+                <div className="flex justify-center space-x-8">
+                    <button onClick={() => handleVote("both_good")} className="px-10 py-3 bg-cyber-dark text-cyber-yellow border border-cyber-yellow hover:bg-cyber-yellow hover:text-cyber-dark font-mono font-bold transform transition-all shadow-[0_0_10px_#fcee0a]">
+                        COLLISION (BOTH EXCEL)
                     </button>
-                    <button onClick={() => handleVote("both_bad")} className="px-8 py-3 bg-gray-800 hover:bg-red-600 focus:bg-red-600 text-gray-300 hover:text-white rounded-xl font-bold transition-all border border-gray-700 hover:border-transparent cursor-pointer">
-                        👎 Both Terrible
+                    <button onClick={() => handleVote("both_bad")} className="px-10 py-3 bg-cyber-dark text-gray-500 border border-gray-500 hover:bg-gray-500 hover:text-white font-mono font-bold transform transition-all">
+                        VOID (BOTH FAIL)
                     </button>
                 </div>
             </div>
 
             {/* Input Form */}
-            <form onSubmit={handleSubmit} className="relative mt-2">
+            <form onSubmit={handleSubmit} className="relative mt-4">
                 <input
                     type="text"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     disabled={isGenerating || isAwaitingVote}
-                    placeholder="Enter your prompt here to challenge the models..."
-                    className="w-full bg-gray-900 border-2 border-gray-800 rounded-2xl pl-6 pr-32 py-5 text-lg focus:outline-none focus:border-blue-500/50 disabled:opacity-40 text-white placeholder-gray-600 transition-all shadow-inner"
+                    placeholder="ENTER QUERY DIRECTIVE..."
+                    className="w-full bg-cyber-dark/80 backdrop-blur-md border-b-2 border-l-2 border-r-0 border-t-0 border-cyber-blue pl-6 pr-32 py-5 text-lg focus:outline-none focus:border-cyber-pink disabled:opacity-40 text-cyber-blue font-mono placeholder-cyber-blue/30 transition-all shadow-inner uppercase tracking-wide"
                 />
                 <button
                     type="submit"
                     disabled={isGenerating || isAwaitingVote || !prompt.trim()}
-                    className="absolute right-3 top-3 bottom-3 bg-white text-black hover:bg-gray-200 px-8 font-black uppercase tracking-widest rounded-xl disabled:opacity-30 disabled:hover:bg-white transition-all shadow-md"
+                    className="absolute right-0 top-0 bottom-0 bg-cyber-blue/20 text-cyber-blue hover:bg-cyber-blue hover:text-cyber-dark border-b-2 border-cyber-blue px-10 font-mono font-bold tracking-widest uppercase disabled:opacity-30 transition-all"
                 >
-                    {isGenerating ? "..." : "Send"}
+                    {isGenerating ? "PROCESSING" : "EXECUTE"}
                 </button>
             </form>
         </div>

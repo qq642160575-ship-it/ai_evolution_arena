@@ -9,47 +9,55 @@ export default function Leaderboard() {
     }, []);
 
     return (
-        <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl p-8 animate-fade-in w-full max-w-4xl mx-auto mt-8">
-            <h2 className="text-3xl font-black uppercase tracking-widest text-center mb-8 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">🏆 Evolution Hub Leaderboard</h2>
+        <div className="glass-panel rounded-2xl p-8 animate-slide-up w-full max-w-4xl mx-auto mt-8 border-t-4 border-cyber-pink shadow-cyber-pink relative overflow-hidden group">
+            <div className="absolute inset-0 bg-cyber-pink/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-            <div className="overflow-hidden rounded-xl border border-gray-800">
-                <table className="w-full text-left border-collapse">
+            <div className="flex items-center justify-center mb-10 relative">
+                <div className="absolute w-full h-px bg-cyber-pink/20"></div>
+                <h2 className="relative z-10 px-6 text-3xl font-display font-black uppercase tracking-widest text-center bg-cyber-dark text-white text-shadow-neon border-l-4 border-r-4 border-cyber-pink">NEXUS RANKINGS</h2>
+            </div>
+
+            <div className="overflow-hidden rounded-lg border border-cyber-blue/30 shadow-[0_0_15px_rgba(0,240,255,0.1)] relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyber-blue to-cyber-pink"></div>
+                <table className="w-full text-left border-collapse font-mono">
                     <thead>
-                        <tr className="bg-gray-800/50 uppercase text-xs font-bold tracking-widest text-gray-400">
-                            <th className="p-4 border-b border-gray-800">Rank</th>
-                            <th className="p-4 border-b border-gray-800">Model Name</th>
-                            <th className="p-4 border-b border-gray-800 text-center">Win Rate</th>
-                            <th className="p-4 border-b border-gray-800 text-center">Matches</th>
-                            <th className="p-4 border-b border-gray-800 text-center">Wins</th>
-                            <th className="p-4 border-b border-gray-800 text-center">Losses</th>
+                        <tr className="bg-cyber-blue/10 uppercase text-xs font-bold tracking-[0.2em] text-cyber-blue border-b-2 border-cyber-blue/50">
+                            <th className="p-4 pl-6">Rank</th>
+                            <th className="p-4">Entity Name</th>
+                            <th className="p-4 text-center">Efficacy</th>
+                            <th className="p-4 text-center">Cycles</th>
+                            <th className="p-4 text-center">Victories</th>
+                            <th className="p-4 text-center">Defeats</th>
                         </tr>
                     </thead>
                     <tbody>
                         {data.map((row, idx) => (
-                            <tr key={row.model} className="border-b border-gray-800 hover:bg-gray-800/20 transition-colors">
-                                <td className="p-4 font-bold text-gray-400">#{idx + 1}</td>
-                                <td className="p-4 font-bold text-white tracking-wide">{row.model}</td>
+                            <tr key={row.model} className="border-b border-cyber-blue/10 hover:bg-cyber-blue/5 transition-colors group">
+                                <td className="p-4 pl-6 font-bold text-cyber-pink group-hover:text-shadow-neon transition-all">0{idx + 1}</td>
+                                <td className="p-4 font-bold text-gray-200 tracking-wide">{row.model}</td>
                                 <td className="p-4 text-center">
-                                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${row.win_rate > 0.5 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                    <span className={`px-3 py-1 text-sm font-bold border ${row.win_rate > 0.5 ? 'border-cyber-blue text-cyber-blue shadow-[0_0_10px_rgba(0,240,255,0.3)]' : 'border-gray-600 text-gray-500'}`}>
                                         {(row.win_rate * 100).toFixed(1)}%
                                     </span>
                                 </td>
-                                <td className="p-4 text-center text-gray-400 font-mono">{row.total_matches}</td>
-                                <td className="p-4 text-center text-green-400 font-mono">{row.wins}</td>
-                                <td className="p-4 text-center text-red-400 font-mono">{row.losses}</td>
+                                <td className="p-4 text-center text-gray-400 font-mono group-hover:text-white transition-colors">{row.total_matches}</td>
+                                <td className="p-4 text-center text-cyber-blue font-mono group-hover:text-shadow-neon transition-all">{row.wins}</td>
+                                <td className="p-4 text-center text-cyber-pink font-mono group-hover:text-shadow-neon transition-all">{row.losses}</td>
                             </tr>
                         ))}
                         {data.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="p-8 text-center text-gray-500 italic">No battle data available yet. Be the first to start an evolution battle!</td>
+                                <td colSpan={6} className="p-8 text-center text-cyber-blue/50 tracking-[0.2em] uppercase font-mono">
+                                    <div className="animate-pulse">Awaiting data injection... Start sequence required.</div>
+                                </td>
                             </tr>
                         )}
                     </tbody>
                 </table>
             </div>
 
-            <div className="mt-8 text-sm text-gray-500 text-center">
-                * Rankings are based on simple win rate. Ties are excluded from the main win/loss ratio but counted in matches. Data is open to the community for research purposes.
+            <div className="mt-8 text-xs font-mono tracking-widest text-gray-500 text-center uppercase">
+                <span className="text-cyber-pink">&gt; </span>Rankings compute simple efficacy. Collisions ignored in W/L metric. Data open-source for deep analysis.
             </div>
         </div>
     );
