@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+backend/venv/
+backend/arena.db
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+.env
+
+# IDE
+.idea/
+.vscode/

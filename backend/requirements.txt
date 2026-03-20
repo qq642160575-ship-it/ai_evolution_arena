@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+aiosqlite
+langchain
+langchain-community
+langchain-openai
+sse-starlette
+pydantic
+python-dotenv
