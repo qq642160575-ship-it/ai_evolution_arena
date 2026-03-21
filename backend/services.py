@@ -1,4 +1,5 @@
 import asyncio
+import json
 import random
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,7 +77,7 @@ class BattleService:
                 if isinstance(data, dict) and data.get("done"):
                     finished_tasks += 1
                 else:
-                    yield {"data": data}
+                    yield {"data": json.dumps(data, ensure_ascii=False)}
         except asyncio.CancelledError:
             logger.info(f"SSE connection cancelled for session {session.id}")
             task_a.cancel()
@@ -125,12 +126,17 @@ class BattleService:
         
         new_turn = current_turn + 1
         
+        # 在 commit 之前，先把需要用到的字段存到本地变量
+        # commit 后 SQLAlchemy 会把 session 的属性标记为 expired，再访问会触发懒加载报错
+        model_a_name = session.model_a
+        model_b_name = session.model_b
+        
         if new_turn >= 3:
             session.is_completed = True
             await self.db.commit()
             return schemas.VoteResponse(
                 is_completed=True, 
-                reveal={"A": session.model_a, "B": session.model_b},
+                reveal={"A": model_a_name, "B": model_b_name},
                 current_turn=new_turn
             )
         else:
