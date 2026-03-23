@@ -1,4 +1,6 @@
-const BASE_URL = 'https://angrach.top/api';
+import { config } from '../config';
+
+const BASE_URL = config.API_BASE_URL;
 
 export async function submitStartSession() {
     const res = await fetch(`${BASE_URL}/battle/start/`, { method: 'POST' });

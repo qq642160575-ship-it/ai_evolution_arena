@@ -4,8 +4,9 @@ import remarkGfm from "remark-gfm";
 import confetti from "canvas-confetti";
 import { useTranslation } from "react-i18next";
 import { submitStartSession, submitVote } from "../lib/api";
+import { config } from "../config";
 
-const BASE_URL = 'https://angrach.top/api';
+const BASE_URL = config.API_BASE_URL;
 
 // ─── Isolated 3D Flip Card (NO parent overflow-hidden) ───────────────────────
 function FlipCard({ front, back, flipped, color }: {
