@@ -5,7 +5,7 @@ import confetti from "canvas-confetti";
 import { useTranslation } from "react-i18next";
 import { submitStartSession, submitVote } from "../lib/api";
 
-const BASE_URL = 'http://127.0.0.1:8000/api';
+const BASE_URL = 'https://angrach.top/api';
 
 // ─── Isolated 3D Flip Card (NO parent overflow-hidden) ───────────────────────
 function FlipCard({ front, back, flipped, color }: {
