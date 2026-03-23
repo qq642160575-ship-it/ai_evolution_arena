@@ -10,7 +10,7 @@ backend/arena.db
 frontend/node_modules/
 frontend/dist/
 frontend/.env
-.env
+backend/.env
 
 # IDE
 .idea/
