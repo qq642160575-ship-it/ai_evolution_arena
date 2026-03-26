@@ -73,9 +73,15 @@ class BattleService:
         try:
             finished_tasks = 0
             while finished_tasks < 2:
-                data = await queue.get()
+                try:
+                    data = await asyncio.wait_for(queue.get(), timeout=120)
+                except asyncio.TimeoutError:
+                    logger.warning(f"Queue get timeout for session {session.id}, forcing close")
+                    break
                 if isinstance(data, dict) and data.get("done"):
                     finished_tasks += 1
+                    # 把 done 信号透传给前端，让前端知道哪个模型已完成
+                    yield {"data": json.dumps({"model": data["model"], "done": True}, ensure_ascii=False)}
                 else:
                     yield {"data": json.dumps(data, ensure_ascii=False)}
         except asyncio.CancelledError:

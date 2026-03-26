@@ -8,57 +8,177 @@ import { config } from "../config";
 
 const BASE_URL = config.API_BASE_URL;
 
-// ─── Isolated 3D Flip Card (NO parent overflow-hidden) ───────────────────────
+// ─── Shared styles ──────────────────────────────────────────────────────────
+const PANEL_STYLE: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: '16px',
+    boxShadow: '0 1px 16px rgba(0,0,0,0.35)',
+    overflow: 'hidden',
+};
+
+const PANEL_HEADER_STYLE: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 16px',
+    height: '48px',
+    borderBottom: '1px solid var(--color-border)',
+    background: 'rgba(255,255,255,0.02)',
+    flexShrink: 0,
+};
+
+// ─── Copy Button ──────────────────────────────────────────────────────────────
+function CopyButton({ text }: { text: string }) {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+        }
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+    return (
+        <button
+            onClick={handleCopy}
+            title={copied ? "已复制" : "复制"}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '10px',
+                fontFamily: 'var(--font-mono)',
+                transition: 'background 180ms ease-out, color 180ms ease-out',
+                background: copied ? 'rgba(52,211,153,0.1)' : 'transparent',
+                color: copied ? 'var(--color-accent-b)' : 'var(--color-text-muted)',
+                flexShrink: 0,
+            }}
+            onMouseEnter={e => { if (!copied) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-primary)'; } }}
+            onMouseLeave={e => { if (!copied) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted)'; } }}
+        >
+            {copied ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+            ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+            )}
+            {copied ? "已复制" : "复制"}
+        </button>
+    );
+}
+
+// ─── Code Block with Copy Button ─────────────────────────────────────────────
+function CodeBlock({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) {
+    const getCode = (): string => {
+        if (!children) return "";
+        const child = React.Children.toArray(children)[0] as React.ReactElement<{ children?: React.ReactNode }>;
+        if (!child) return "";
+        const inner = child.props?.children;
+        if (typeof inner === "string") return inner;
+        if (Array.isArray(inner)) return inner.join("");
+        return "";
+    };
+    const [hovered, setHovered] = useState(false);
+    return (
+        <div
+            style={{ position: 'relative' }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            <div style={{ position: 'absolute', top: '8px', right: '8px', opacity: hovered ? 1 : 0, transition: 'opacity 180ms ease-out', zIndex: 10 }}>
+                <CopyButton text={getCode()} />
+            </div>
+            <pre {...props}>{children}</pre>
+        </div>
+    );
+}
+
+const markdownComponents = { pre: CodeBlock };
+
+// ─── Model dot indicator ──────────────────────────────────────────────────────
+function ModelDot({ color }: { color: 'a' | 'b' }) {
+    return (
+        <span style={{
+            display: 'inline-block',
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            background: color === 'a' ? 'var(--color-accent)' : 'var(--color-accent-b)',
+            flexShrink: 0,
+            boxShadow: color === 'a' ? '0 0 6px rgba(129,140,248,0.5)' : '0 0 6px rgba(52,211,153,0.5)',
+        }} />
+    );
+}
+
+// ─── Loading shimmer ──────────────────────────────────────────────────────────
+function ShimmerLoader() {
+    return (
+        <div style={{ padding: '28px 28px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[80, 60, 90, 50].map((w, i) => (
+                <div key={i} className="skeleton" style={{ height: '14px', width: `${w}%`, animationDelay: `${i * 0.12}s` }} />
+            ))}
+        </div>
+    );
+}
+
+// ─── FlipCard ────────────────────────────────────────────────────────────────
 function FlipCard({ front, back, flipped, color }: {
-    front: string;
-    back: string;
-    flipped: boolean;
-    color: string; // 'model-a' | 'model-b'
+    front: string; back: string; flipped: boolean; color: string;
 }) {
     return (
-        <div style={{ perspective: '1000px' }} className="w-full h-full">
-            <div
-                style={{
-                    transformStyle: 'preserve-3d',
-                    transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                    transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                }}
-            >
-                {/* Front */}
-                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-                    className="absolute inset-0 flex items-center justify-center font-mono tracking-[0.2em] text-[10px] text-dark-400 uppercase bg-dark-900/50"
-                >
-                    {front}
+        <div style={{ perspective: '1000px', width: '100%', height: '100%' }}>
+            <div style={{
+                transformStyle: 'preserve-3d',
+                transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+            }}>
+                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>{front}</span>
                 </div>
-                {/* Back */}
                 <div style={{
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden',
-                    transform: 'rotateY(180deg)'
-                }}
-                    className={`absolute inset-0 flex items-center justify-center font-serif text-sm tracking-wide ${color === 'model-a' ? 'text-model-a bg-model-a/10' : 'text-model-b bg-model-b/10'}`}
-                >
-                    ✨ {back}
+                    backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                    transform: 'rotateY(180deg)',
+                    position: 'absolute', inset: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: color === 'model-a' ? 'var(--color-accent-soft)' : 'var(--color-accent-b-soft)',
+                }}>
+                    <span style={{ fontSize: '13px', fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: color === 'model-a' ? 'var(--color-accent)' : 'var(--color-accent-b)' }}>
+                        ✦ {back}
+                    </span>
                 </div>
             </div>
         </div>
     );
 }
 
-// ─── Battle-End Reveal Overlay ─────────────────────────────────────────────
+// ─── Reveal Overlay ───────────────────────────────────────────────────────────
 function RevealOverlay({ revealData, voteSelection, onNewBattle, onLeaderboard }: {
-    revealData: any;
-    voteSelection: string | null;
-    onNewBattle: () => void;
-    onLeaderboard: () => void;
+    revealData: any; voteSelection: string | null;
+    onNewBattle: () => void; onLeaderboard: () => void;
 }) {
     const { t } = useTranslation();
     const [flipped, setFlipped] = useState(false);
 
-    // Stagger the flip: start after mount
     useEffect(() => {
         const timer = setTimeout(() => setFlipped(true), 600);
         return () => clearTimeout(timer);
@@ -68,87 +188,105 @@ function RevealOverlay({ revealData, voteSelection, onNewBattle, onLeaderboard }
     const bWon = voteSelection === 'right' || voteSelection === 'both_good';
     const bothBad = voteSelection === 'both_bad';
 
+    const cardStyle = (won: boolean): React.CSSProperties => ({
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: '16px',
+        border: won
+            ? (voteSelection === 'left' || aWon && voteSelection !== 'both_good' ? '1px solid rgba(129,140,248,0.3)' : '1px solid rgba(52,211,153,0.3)')
+            : '1px solid var(--color-border)',
+        overflow: 'hidden',
+        minHeight: '160px',
+        background: won ? (voteSelection === 'right' ? 'var(--color-accent-b-soft)' : 'var(--color-accent-soft)') : 'var(--color-surface)',
+        transition: 'background 1s ease-out',
+    });
+
     return (
-        <div className="fixed inset-0 z-50 bg-dark-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-fadeIn">
-            {/* Title */}
-            <div className="text-center mb-10 animate-slideUp">
-                <p className="text-[10px] font-mono tracking-[0.3em] text-dark-400 uppercase mb-3">
-                    {bothBad ? '— Protocol Terminated —' : '— Identity Revealed —'}
+        <div className="animate-fadeIn" style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(15,15,17,0.92)',
+            backdropFilter: 'blur(24px)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px'
+        }}>
+            <div className="animate-slideUp" style={{ textAlign: 'center', marginBottom: '40px' }}>
+                <p style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: '12px' }}>
+                    {bothBad ? '— run aborted —' : '— identity revealed —'}
                 </p>
-                <h2 className="text-3xl md:text-4xl font-serif text-white tracking-tight">
+                <h2 style={{ fontSize: '30px', fontFamily: 'var(--font-serif)', color: 'var(--color-text-primary)', letterSpacing: '-0.02em', fontWeight: '500' }}>
                     {t('arena.thanks')}
                 </h2>
             </div>
 
-            {/* Flip Cards Row */}
-            <div className="flex flex-col md:flex-row gap-6 w-full max-w-3xl mb-10">
-                {/* Model A Card */}
-                <div className="flex-1 flex flex-col gap-0 min-h-[180px]">
-                    {/* Flip card header — standalone, no overflow-hidden parent */}
-                    <div className="h-14 rounded-t-2xl border border-dark-700 border-b-0 relative overflow-visible">
-                        <FlipCard
-                            front={t('arena.entity_a')}
-                            back={revealData?.A || t('arena.unknown')}
-                            flipped={flipped}
-                            color="model-a"
-                        />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '640px', marginBottom: '40px' }} className="md:flex-row">
+                <div className="flex flex-col md:flex-row gap-4 w-full">
+                    {/* Model A */}
+                    <div style={cardStyle(aWon)}>
+                        <div style={{ height: '56px', position: 'relative', borderBottom: '1px solid var(--color-border)' }}>
+                            <FlipCard front={t('arena.entity_a')} back={revealData?.A || t('arena.unknown')} flipped={flipped} color="model-a" />
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '24px' }}>
+                            <span style={{ fontSize: '24px' }}>{aWon ? '🏆' : bothBad ? '💀' : '—'}</span>
+                            <p style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: '600', color: aWon ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>
+                                {aWon ? t('arena.winner') : t('arena.eliminated')}
+                            </p>
+                        </div>
                     </div>
-                    {/* Card Body */}
-                    <div className={`flex-1 rounded-b-2xl border border-dark-700 p-6 flex flex-col items-center justify-center gap-3 transition-colors duration-1000 ${aWon ? 'bg-model-a/5 border-model-a/30' : 'bg-dark-950'}`}>
-                        {aWon ? (
-                            <span className="text-2xl animate-popIn">🏆</span>
-                        ) : bothBad ? (
-                            <span className="text-2xl opacity-50">💀</span>
-                        ) : (
-                            <span className="text-xl opacity-40">✗</span>
-                        )}
-                        <p className={`text-[10px] font-mono tracking-[0.2em] uppercase font-bold ${aWon ? 'text-model-a' : 'text-dark-600'}`}>
-                            {aWon ? t('arena.winner') : t('arena.eliminated')}
-                        </p>
-                    </div>
-                </div>
 
-                {/* VS separator */}
-                <div className="flex items-center justify-center">
-                    <div className="font-serif text-dark-600 text-sm italic tracking-widest opacity-50">vs</div>
-                </div>
-
-                {/* Model B Card */}
-                <div className="flex-1 flex flex-col gap-0 min-h-[180px]">
-                    <div className="h-14 rounded-t-2xl border border-dark-700 border-b-0 relative overflow-visible">
-                        <FlipCard
-                            front={t('arena.entity_b')}
-                            back={revealData?.B || t('arena.unknown')}
-                            flipped={flipped}
-                            color="model-b"
-                        />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                        <span style={{ fontSize: '11px', fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--color-text-muted)' }}>vs</span>
                     </div>
-                    <div className={`flex-1 rounded-b-2xl border border-dark-700 p-6 flex flex-col items-center justify-center gap-3 transition-colors duration-1000 ${bWon ? 'bg-model-b/5 border-model-b/30' : 'bg-dark-950'}`}>
-                        {bWon ? (
-                            <span className="text-2xl animate-popIn">🏆</span>
-                        ) : bothBad ? (
-                            <span className="text-2xl opacity-50">💀</span>
-                        ) : (
-                            <span className="text-xl opacity-40">✗</span>
-                        )}
-                        <p className={`text-[10px] font-mono tracking-[0.2em] uppercase font-bold ${bWon ? 'text-model-b' : 'text-dark-600'}`}>
-                            {bWon ? t('arena.winner') : t('arena.eliminated')}
-                        </p>
+
+                    {/* Model B */}
+                    <div style={cardStyle(bWon)}>
+                        <div style={{ height: '56px', position: 'relative', borderBottom: '1px solid var(--color-border)' }}>
+                            <FlipCard front={t('arena.entity_b')} back={revealData?.B || t('arena.unknown')} flipped={flipped} color="model-b" />
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '24px' }}>
+                            <span style={{ fontSize: '24px' }}>{bWon ? '🏆' : bothBad ? '💀' : '—'}</span>
+                            <p style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: '600', color: bWon ? 'var(--color-accent-b)' : 'var(--color-text-muted)' }}>
+                                {bWon ? t('arena.winner') : t('arena.eliminated')}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-4 animate-slideUp">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }} className="animate-slideUp">
                 <button
                     onClick={onLeaderboard}
-                    className="px-8 py-4 bg-dark-800 border border-dark-700 text-white font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-dark-700 transition-colors rounded-full"
+                    style={{
+                        padding: '12px 24px', borderRadius: '10px',
+                        border: '1px solid var(--color-border)',
+                        background: 'var(--color-surface)',
+                        color: 'var(--color-text-secondary)',
+                        fontSize: '11px', fontWeight: '500',
+                        letterSpacing: '0.06em', textTransform: 'uppercase',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'background 180ms ease-out, color 180ms ease-out',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--color-surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-primary)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--color-surface)'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-secondary)'; }}
                 >
                     {t('arena.view_rankings')}
                 </button>
                 <button
                     onClick={onNewBattle}
-                    className="px-8 py-4 bg-white text-dark-950 font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-dark-100 transition-colors rounded-full shadow-xl"
+                    style={{
+                        padding: '12px 24px', borderRadius: '10px',
+                        border: 'none',
+                        background: 'var(--color-accent)',
+                        color: '#fff',
+                        fontSize: '11px', fontWeight: '600',
+                        letterSpacing: '0.06em', textTransform: 'uppercase',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'opacity 180ms ease-out',
+                        boxShadow: '0 2px 12px rgba(129,140,248,0.3)',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
                 >
                     {t('arena.new_protocol')}
                 </button>
@@ -157,11 +295,46 @@ function RevealOverlay({ revealData, voteSelection, onNewBattle, onLeaderboard }
     );
 }
 
+// ─── Markdown Panel ───────────────────────────────────────────────────────────
+function ModelPanel({ label, content, color, scrollHeight }: {
+    label: string; content: string; color: 'a' | 'b'; scrollHeight: string;
+}) {
+    return (
+        <div style={PANEL_STYLE}>
+            <div style={PANEL_HEADER_STYLE}>
+                <ModelDot color={color} />
+                <span style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    color: 'var(--color-text-muted)',
+                }}>
+                    {label}
+                </span>
+                {content && <CopyButton text={content} />}
+            </div>
+            <div style={{ overflowY: 'auto', height: scrollHeight }}>
+                {content ? (
+                    <div style={{ padding: '20px 24px' }} className="markdown-body">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                            {content}
+                        </ReactMarkdown>
+                    </div>
+                ) : (
+                    <ShimmerLoader />
+                )}
+            </div>
+        </div>
+    );
+}
 
-// ─── Main Arena Component ──────────────────────────────────────────────────
+// ─── Main Arena ───────────────────────────────────────────────────────────────
 export default function Arena({ onNavigate, onMatchComplete }: {
-    onNavigate: (view: 'arena' | 'leaderboard') => void,
-    onMatchComplete: () => void
+    onNavigate: (view: 'arena' | 'leaderboard') => void;
+    onMatchComplete: () => void;
 }) {
     const { t } = useTranslation();
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -171,11 +344,11 @@ export default function Arena({ onNavigate, onMatchComplete }: {
     const [isAwaitingVote, setIsAwaitingVote] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
     const [voteSelection, setVoteSelection] = useState<string | null>(null);
-
     const [responseA, setResponseA] = useState<string>("");
     const [responseB, setResponseB] = useState<string>("");
-
-    // Reveal State
+    const [conversationHistory, setConversationHistory] = useState<Array<{
+        turnNumber: number; prompt: string; responseA: string; responseB: string;
+    }>>([]);
     const [revealData, setRevealData] = useState<any>(null);
 
     const triggerCelebration = () => {
@@ -199,6 +372,7 @@ export default function Arena({ onNavigate, onMatchComplete }: {
             setTurn(1);
             setHasStarted(true);
             resetArena();
+            setConversationHistory([]);
             setRevealData(null);
             setVoteSelection(null);
         } catch (e) {
@@ -207,56 +381,51 @@ export default function Arena({ onNavigate, onMatchComplete }: {
     };
 
     const resetArena = () => {
-        setPrompt("");
-        setResponseA("");
-        setResponseB("");
-        setIsGenerating(false);
-        setIsAwaitingVote(false);
-        setVoteSelection(null);
+        setPrompt(""); setResponseA(""); setResponseB("");
+        setIsGenerating(false); setIsAwaitingVote(false); setVoteSelection(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!prompt.trim() || !sessionId || isGenerating || isAwaitingVote) return;
-
         setIsGenerating(true);
-        setResponseA("");
-        setResponseB("");
-
+        setResponseA(""); setResponseB("");
         try {
             const response = await fetch(`${BASE_URL}/battle/chat/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'text/event-stream',
-                },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
                 body: JSON.stringify({ session_id: sessionId, prompt })
             });
-
             if (!response.body) throw new Error("No response body");
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let done = false;
-            while (!done) {
+            let doneA = false, doneB = false;
+            while (true) {
                 const { value, done: readerDone } = await reader.read();
-                done = readerDone;
+                if (readerDone) break;
                 if (value) {
                     const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n');
-                    for (const line of lines) {
+                    let bothDone = false;
+                    for (const line of chunk.split('\n')) {
                         if (line.startsWith('data: ')) {
                             try {
                                 const data = JSON.parse(line.slice(6));
+                                if (data.done) {
+                                    if (data.model === 'A') doneA = true;
+                                    else if (data.model === 'B') doneB = true;
+                                    if (doneA && doneB) { bothDone = true; break; }
+                                    continue;
+                                }
                                 if (data.model === 'A' && data.chunk) setResponseA(prev => prev + data.chunk);
                                 else if (data.model === 'B' && data.chunk) setResponseB(prev => prev + data.chunk);
-                            } catch (err) { }
+                            } catch { }
                         }
                     }
+                    if (bothDone) break;
                 }
             }
             setIsGenerating(false);
             setIsAwaitingVote(true);
-
         } catch (e) {
             alert("Error generating response: " + e);
             setIsGenerating(false);
@@ -271,10 +440,9 @@ export default function Arena({ onNavigate, onMatchComplete }: {
             if (resp.is_completed) {
                 setRevealData(resp.reveal);
                 onMatchComplete();
-                if (voteResult !== 'both_bad') {
-                    setTimeout(() => triggerCelebration(), 800); // delay to let overlay mount
-                }
+                if (voteResult !== 'both_bad') setTimeout(() => triggerCelebration(), 800);
             } else {
+                setConversationHistory(prev => [...prev, { turnNumber: turn, prompt, responseA, responseB }]);
                 setTurn(resp.current_turn + 1);
                 resetArena();
             }
@@ -284,6 +452,8 @@ export default function Arena({ onNavigate, onMatchComplete }: {
     };
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -291,21 +461,49 @@ export default function Arena({ onNavigate, onMatchComplete }: {
         }
     }, [prompt]);
 
+    useEffect(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, [responseA, responseB, conversationHistory.length]);
+
     // ── Pre-Game Landing ──────────────────────────────────────────────────
     if (!hasStarted) {
         return (
-            <div className="flex flex-col justify-center items-center h-full w-full max-w-2xl mx-auto px-6">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-5xl font-serif text-white tracking-tight mb-4 whitespace-pre-line">{t('arena.title')}</h2>
-                    <p className="text-dark-400 font-sans text-sm md:text-base max-w-md mx-auto leading-relaxed mt-6 whitespace-pre-line">{t('arena.subtitle')}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '0 32px' }}>
+                <div style={{ textAlign: 'center', maxWidth: '480px' }} className="animate-fadeIn">
+                    {/* Badge */}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '100px', border: '1px solid var(--color-border)', marginBottom: '32px', fontSize: '11px', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-accent)', display: 'inline-block' }} />
+                        Protocol ready
+                    </div>
+                    <h2 style={{ fontSize: '36px', fontFamily: 'var(--font-serif)', color: 'var(--color-text-primary)', letterSpacing: '-0.025em', fontWeight: '500', marginBottom: '16px', lineHeight: 1.2 }}>
+                        {t('arena.title')}
+                    </h2>
+                    <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '40px' }}>
+                        {t('arena.subtitle')}
+                    </p>
+                    <button
+                        onClick={startBattle}
+                        style={{
+                            padding: '13px 32px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: 'var(--color-accent)',
+                            color: '#fff',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                            fontFamily: 'var(--font-sans)',
+                            boxShadow: '0 2px 20px rgba(129,140,248,0.35)',
+                            transition: 'transform 180ms ease-out, box-shadow 180ms ease-out',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 24px rgba(129,140,248,0.45)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 20px rgba(129,140,248,0.35)'; }}
+                    >
+                        {t('arena.initiate')}
+                    </button>
                 </div>
-                <button
-                    onClick={startBattle}
-                    className="group relative px-10 py-4 bg-white text-dark-950 font-sans font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase overflow-hidden rounded-full transition-all hover:scale-105 shadow-2xl"
-                >
-                    <span className="relative z-10 transition-colors group-hover:text-white">{t('arena.initiate')}</span>
-                    <div className="absolute inset-0 bg-dark-800 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left ease-out duration-500 rounded-full"></div>
-                </button>
             </div>
         );
     }
@@ -314,7 +512,6 @@ export default function Arena({ onNavigate, onMatchComplete }: {
 
     return (
         <>
-            {/* Full-Screen Reveal Overlay (mounted outside any overflow:hidden parent) */}
             {isRevealed && (
                 <RevealOverlay
                     revealData={revealData}
@@ -324,100 +521,118 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                 />
             )}
 
-            {/* Main Arena Layout */}
-            <div className="flex flex-col h-full w-full max-w-6xl mx-auto relative animate-fadeIn md:px-6">
-
+            <div className="animate-fadeIn" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', maxWidth: '1140px', margin: '0 auto', padding: '0 24px', position: 'relative' }}>
                 {/* Top Banner */}
-                <div className="flex justify-between items-center py-5 border-b border-dark-800 mb-6 shrink-0 px-4 md:px-0">
-                    <p className="text-[10px] uppercase tracking-widest text-dark-400 font-medium">{t('arena.cycle', { turn })}</p>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-dark-400 hidden sm:block italic font-serif">{t('arena.rule')}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 0', borderBottom: '1px solid var(--color-border)', marginBottom: '20px', flexShrink: 0 }}>
+                    <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                        {t('arena.cycle', { turn })}
+                    </span>
+                    <span style={{ fontSize: '10px', fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--color-text-muted)', display: 'none' }} className="sm:inline">
+                        {t('arena.rule')}
+                    </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto hide-scrollbar pb-40 px-4 md:px-0 scroll-smooth">
+                {/* Scroll Area */}
+                <div ref={scrollRef} className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: '160px' }}>
 
-                    {/* User Prompt Bubble */}
-                    {prompt && (isGenerating || isAwaitingVote) && (
-                        <div className="w-full flex justify-end mb-10">
-                            <div className="bg-dark-800 text-dark-100 px-6 py-4 rounded-2xl rounded-tr-sm max-w-[85%] text-sm font-sans border border-dark-700/50 leading-relaxed shadow-lg">
-                                {prompt}
+                    {/* ── History Turns ─────────────────────────── */}
+                    {conversationHistory.map((histTurn, idx) => (
+                        <div key={idx} style={{ marginBottom: '32px', opacity: 0.55 }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                                <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', padding: '3px 10px', borderRadius: '100px' }}>
+                                    {t('arena.cycle', { turn: histTurn.turnNumber })}
+                                </span>
+                            </div>
+                            {/* Prompt */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+                                <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: '14px', borderTopRightRadius: '4px', padding: '10px 16px', maxWidth: '80%', fontSize: '13.5px', color: 'var(--color-text-secondary)', lineHeight: 1.65 }}>
+                                    {histTurn.prompt}
+                                </div>
+                            </div>
+                            {/* History panels — always side by side */}
+                            <div style={{ display: 'flex', gap: '12px', flexDirection: 'row', minWidth: 0 }}>
+                                <ModelPanel label={t('arena.entity_a')} content={histTurn.responseA} color="a" scrollHeight="36vh" />
+                                <ModelPanel label={t('arena.entity_b')} content={histTurn.responseB} color="b" scrollHeight="36vh" />
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* ── Current Turn ──────────────────────────── */}
+                    {(isGenerating || isAwaitingVote) && (
+                        <div style={{ marginBottom: '24px' }}>
+                            {conversationHistory.length > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                                    <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', padding: '3px 10px', borderRadius: '100px' }}>
+                                        {t('arena.cycle', { turn })}
+                                    </span>
+                                </div>
+                            )}
+                            {/* Prompt bubble */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                                <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: '14px', borderTopRightRadius: '4px', padding: '12px 18px', maxWidth: '82%', fontSize: '14px', color: 'var(--color-text-primary)', lineHeight: 1.65, boxShadow: '0 1px 8px rgba(0,0,0,0.2)' }}>
+                                    {prompt}
+                                </div>
+                            </div>
+                            {/* Current panels — always side by side */}
+                            <div style={{ display: 'flex', gap: '16px', flexDirection: 'row', minWidth: 0 }}>
+                                <ModelPanel label={t('arena.entity_a')} content={responseA} color="a" scrollHeight="58vh" />
+                                <ModelPanel label={t('arena.entity_b')} content={responseB} color="b" scrollHeight="58vh" />
                             </div>
                         </div>
                     )}
-
-                    {/* Response Cards */}
-                    <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-
-                        {/* Mobile VS separator */}
-                        <div className="md:hidden w-full flex justify-center py-2 opacity-30 font-serif italic text-xs tracking-widest text-dark-400">{t('arena.vs')}</div>
-
-                        {/* Model A */}
-                        <div className="flex-1 flex flex-col bg-dark-950/80 border border-dark-800 rounded-xl shadow-2xl min-h-[400px]">
-                            <div className="shrink-0 h-12 border-b border-dark-800 bg-dark-900/50 rounded-t-xl flex items-center justify-center font-mono tracking-[0.2em] text-[10px] text-dark-400 uppercase">
-                                {t('arena.entity_a')}
-                            </div>
-                            <div className="flex-1 p-6 md:p-8 font-serif text-dark-100 text-sm md:text-[15px] leading-[1.8]">
-                                {responseA ? (
-                                    <div className="markdown-body">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{responseA}</ReactMarkdown>
-                                    </div>
-                                ) : (
-                                    <div className="flex h-full items-center justify-center">
-                                        <span className="w-1.5 h-1.5 bg-dark-600 rounded-full animate-pulse"></span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Model B */}
-                        <div className="flex-1 flex flex-col bg-dark-950/80 border border-dark-800 rounded-xl shadow-2xl min-h-[400px]">
-                            <div className="shrink-0 h-12 border-b border-dark-800 bg-dark-900/50 rounded-t-xl flex items-center justify-center font-mono tracking-[0.2em] text-[10px] text-dark-400 uppercase">
-                                {t('arena.entity_b')}
-                            </div>
-                            <div className="flex-1 p-6 md:p-8 font-serif text-dark-100 text-sm md:text-[15px] leading-[1.8]">
-                                {responseB ? (
-                                    <div className="markdown-body">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{responseB}</ReactMarkdown>
-                                    </div>
-                                ) : (
-                                    <div className="flex h-full items-center justify-center">
-                                        <span className="w-1.5 h-1.5 bg-dark-600 rounded-full animate-pulse"></span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
-                {/* Sticky Action Dock */}
-                <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-dark-900 via-dark-900/90 to-transparent pt-16 pb-8 px-4 z-40 shrink-0">
-                    <div className="max-w-4xl mx-auto">
-
+                {/* ── Sticky Dock ───────────────────────────────── */}
+                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, var(--color-base) 60%, transparent)', paddingTop: '64px', paddingBottom: '28px', paddingLeft: '24px', paddingRight: '24px', zIndex: 40 }}>
+                    <div style={{ maxWidth: '860px', margin: '0 auto' }}>
                         {isAwaitingVote ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3 animate-slideUp w-full">
-                                <button onClick={() => handleVote("left")} className="py-4 bg-dark-950/80 border border-dark-800 text-model-a hover:bg-model-a/10 font-medium text-[10px] md:text-xs tracking-widest rounded-xl transition-all shadow-lg backdrop-blur-md uppercase">
-                                    {t('arena.alpha_wins')}
-                                </button>
-                                <button onClick={() => handleVote("both_good")} className="py-4 bg-dark-950/80 border border-dark-800 text-white hover:bg-dark-800 font-medium text-[10px] md:text-xs tracking-widest rounded-xl transition-all shadow-lg backdrop-blur-md uppercase">
-                                    {t('arena.mutual_tie')}
-                                </button>
-                                <button onClick={() => handleVote("both_bad")} className="py-4 bg-dark-950/80 border border-dark-800 text-dark-400 hover:bg-dark-800 font-medium text-[10px] md:text-xs tracking-widest rounded-xl transition-all shadow-lg backdrop-blur-md uppercase">
-                                    {t('arena.both_fail')}
-                                </button>
-                                <button onClick={() => handleVote("right")} className="py-4 bg-dark-950/80 border border-dark-800 text-model-b hover:bg-model-b/10 font-medium text-[10px] md:text-xs tracking-widest rounded-xl transition-all shadow-lg backdrop-blur-md uppercase">
-                                    {t('arena.beta_wins')}
-                                </button>
+                            /* Vote button connected pill group */
+                            <div className="vote-group animate-slideUp">
+                                <button className="vote-btn accent-a" onClick={() => handleVote("left")}>{t('arena.alpha_wins')}</button>
+                                <button className="vote-btn" onClick={() => handleVote("both_good")} style={{ borderRight: '1px solid var(--color-border)' }}>{t('arena.mutual_tie')}</button>
+                                <button className="vote-btn" onClick={() => handleVote("both_bad")} style={{ borderRight: '1px solid var(--color-border)' }}>{t('arena.both_fail')}</button>
+                                <button className="vote-btn accent-b" onClick={() => handleVote("right")}>{t('arena.beta_wins')}</button>
                             </div>
                         ) : (
-                            <form onSubmit={handleSubmit} className="relative flex items-center bg-dark-950/80 backdrop-blur-md border border-dark-800 rounded-2xl shadow-2xl p-2 transition-all focus-within:border-dark-600 focus-within:ring-1 focus-within:ring-dark-600">
+                            <form
+                                onSubmit={handleSubmit}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    background: 'var(--color-surface)',
+                                    backdropFilter: 'blur(20px)',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: '14px',
+                                    boxShadow: '0 2px 24px rgba(0,0,0,0.3)',
+                                    padding: '6px 6px 6px 16px',
+                                    transition: 'border-color 200ms ease-out, box-shadow 200ms ease-out',
+                                }}
+                                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(129,140,248,0.35)'; e.currentTarget.style.boxShadow = '0 2px 24px rgba(0,0,0,0.3), 0 0 0 3px rgba(129,140,248,0.07)'; }}
+                                onBlur={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = '0 2px 24px rgba(0,0,0,0.3)'; }}
+                            >
                                 <textarea
                                     ref={textareaRef}
                                     value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
+                                    onChange={e => setPrompt(e.target.value)}
                                     disabled={isGenerating}
                                     placeholder={t('arena.placeholder')}
-                                    className="flex-1 bg-transparent px-4 py-3 text-sm md:text-base text-white placeholder-dark-400 focus:outline-none resize-none font-sans min-h-[44px] max-h-[150px] disabled:opacity-50"
+                                    style={{
+                                        flex: 1,
+                                        background: 'transparent',
+                                        border: 'none',
+                                        outline: 'none',
+                                        resize: 'none',
+                                        fontFamily: 'var(--font-sans)',
+                                        fontSize: '14px',
+                                        color: 'var(--color-text-primary)',
+                                        lineHeight: 1.6,
+                                        minHeight: '40px',
+                                        maxHeight: '150px',
+                                        paddingTop: '8px',
+                                        paddingBottom: '8px',
+                                    }}
                                     rows={1}
-                                    onKeyDown={(e) => {
+                                    onKeyDown={e => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
                                             e.preventDefault();
                                             handleSubmit(e as unknown as React.FormEvent);
@@ -427,14 +642,24 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                                 <button
                                     type="submit"
                                     disabled={isGenerating || !prompt.trim()}
-                                    className="p-3 bg-white text-dark-950 rounded-xl disabled:opacity-20 disabled:cursor-not-allowed hover:bg-dark-100 transition-colors flex-shrink-0"
+                                    style={{
+                                        width: '38px', height: '38px',
+                                        borderRadius: '9px',
+                                        border: 'none',
+                                        background: 'var(--color-accent)',
+                                        color: '#fff',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        flexShrink: 0,
+                                        transition: 'opacity 180ms ease-out',
+                                        opacity: (isGenerating || !prompt.trim()) ? 0.25 : 1,
+                                    }}
                                 >
                                     {isGenerating ? (
-                                        <span className="block w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full animate-spin"></span>
+                                        <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'block', animation: 'spin 0.7s linear infinite' }} />
                                     ) : (
-                                        <svg className="w-5 h-5 translate-x-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                                         </svg>
                                     )}
                                 </button>

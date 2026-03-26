@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchLeaderboard } from "../lib/api";
 
+const MEDAL: Record<number, string> = { 0: '🥇', 1: '🥈', 2: '🥉' };
+
 export default function Leaderboard() {
     const { t } = useTranslation();
     const [data, setData] = useState<any[]>([]);
@@ -11,58 +13,129 @@ export default function Leaderboard() {
     }, []);
 
     return (
-        <div className="w-full max-w-5xl mx-auto relative animate-fadeIn py-8">
-            <div className="mb-14">
-                <h2 className="text-4xl text-white font-serif tracking-tight mb-2">{t('leaderboard.title')}</h2>
-                <div className="w-12 h-[2px] bg-dark-700 rounded-full mb-4"></div>
-                <p className="text-dark-400 font-sans text-sm">{t('leaderboard.subtitle')}</p>
+        <div style={{ width: '100%', maxWidth: '860px', margin: '0 auto' }} className="animate-fadeIn">
+            {/* Header */}
+            <div style={{ marginBottom: '40px' }}>
+                <h2 style={{ fontSize: '26px', fontFamily: 'var(--font-serif)', fontWeight: '500', color: 'var(--color-text-primary)', letterSpacing: '-0.02em', marginBottom: '8px' }}>
+                    {t('leaderboard.title')}
+                </h2>
+                <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+                    {t('leaderboard.subtitle')}
+                </p>
             </div>
 
-            <div className="bg-dark-950 border border-dark-800 rounded-2xl overflow-hidden shadow-2xl">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-dark-900/50 border-b border-dark-800 text-[10px] uppercase tracking-[0.2em] font-medium text-dark-400">
-                                <th className="p-6 pl-8 w-24">{t('leaderboard.rank')}</th>
-                                <th className="p-6">{t('leaderboard.identity')}</th>
-                                <th className="p-6 text-center">{t('leaderboard.win_rate')}</th>
-                                <th className="p-6 text-center">{t('leaderboard.matches')}</th>
-                                <th className="p-6 text-center text-model-a/70">{t('leaderboard.wins')}</th>
-                                <th className="p-6 text-center text-model-b/70">{t('leaderboard.losses')}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="font-sans text-sm">
-                            {data.map((row, idx) => (
-                                <tr key={row.model} className="border-b border-dark-800/50 hover:bg-dark-800/20 transition-colors group">
-                                    <td className="p-6 pl-8 font-mono text-dark-400">
-                                        {(idx + 1).toString().padStart(2, '0')}
-                                    </td>
-                                    <td className="p-6 font-medium text-dark-100 group-hover:text-white transition-colors">{row.model}</td>
-                                    <td className="p-6 text-center">
-                                        <span className={`px-4 py-1.5 text-xs font-bold rounded-full border ${row.win_rate > 0.5 ? 'border-dark-700 bg-dark-800 text-white' : 'border-dark-800 bg-transparent text-dark-400'}`}>
-                                            {(row.win_rate * 100).toFixed(1)}%
-                                        </span>
-                                    </td>
-                                    <td className="p-6 text-center text-dark-400">{row.total_matches}</td>
-                                    <td className="p-6 text-center text-model-a">{row.wins}</td>
-                                    <td className="p-6 text-center text-model-b">{row.losses}</td>
-                                </tr>
-                            ))}
-                            {data.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="p-16 text-center text-dark-400 text-sm italic font-serif opacity-50">
-                                        {t('leaderboard.no_data')}
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+            {/* Column labels */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '48px 1fr 120px 80px 80px',
+                gap: '0 16px',
+                padding: '0 20px 10px',
+                fontSize: '10px',
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--color-text-muted)',
+                alignItems: 'center',
+            }}>
+                <span>#</span>
+                <span>{t('leaderboard.identity')}</span>
+                <span>{t('leaderboard.win_rate')}</span>
+                <span style={{ textAlign: 'center' }}>{t('leaderboard.wins')}</span>
+                <span style={{ textAlign: 'center' }}>{t('leaderboard.matches')}</span>
+            </div>
+
+            {/* Rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {data.map((row, idx) => (
+                    <LeaderboardRow key={row.model} row={row} idx={idx} />
+                ))}
+                {data.length === 0 && (
+                    <div style={{
+                        padding: '64px 24px',
+                        textAlign: 'center',
+                        fontSize: '13px',
+                        fontFamily: 'var(--font-serif)',
+                        fontStyle: 'italic',
+                        color: 'var(--color-text-muted)',
+                        background: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '14px',
+                    }}>
+                        {t('leaderboard.no_data')}
+                    </div>
+                )}
+            </div>
+
+            {/* Footer */}
+            <p style={{ marginTop: '32px', textAlign: 'center', fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-text-muted)', opacity: 0.5 }}>
+                {t('leaderboard.footer')}
+            </p>
+        </div>
+    );
+}
+
+function LeaderboardRow({ row, idx }: { row: any; idx: number }) {
+    const [hovered, setHovered] = useState(false);
+    const pct = (row.win_rate * 100).toFixed(1);
+    const isTop = idx < 3;
+
+    return (
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                display: 'grid',
+                gridTemplateColumns: '48px 1fr 120px 80px 80px',
+                gap: '0 16px',
+                alignItems: 'center',
+                padding: '14px 20px',
+                borderRadius: '12px',
+                border: `1px solid ${hovered ? 'rgba(129,140,248,0.18)' : 'var(--color-border)'}`,
+                background: hovered ? 'var(--color-surface-2)' : 'var(--color-surface)',
+                transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
+                boxShadow: hovered ? '0 4px 16px rgba(0,0,0,0.25)' : '0 1px 4px rgba(0,0,0,0.15)',
+                transition: 'transform 200ms ease-out, box-shadow 200ms ease-out, background 200ms ease-out, border-color 200ms ease-out',
+                cursor: 'default',
+            }}
+        >
+            {/* Rank */}
+            <span style={{ fontSize: isTop ? '16px' : '12px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', textAlign: 'center' }}>
+                {isTop ? MEDAL[idx] : (idx + 1).toString().padStart(2, '0')}
+            </span>
+
+            {/* Model name */}
+            <span style={{ fontSize: '14px', fontWeight: '500', color: hovered ? 'var(--color-text-primary)' : '#C8C8D2', transition: 'color 200ms ease-out', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {row.model}
+            </span>
+
+            {/* Win rate bar + number */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: '600', color: row.win_rate > 0.5 ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}>
+                        {pct}%
+                    </span>
+                </div>
+                <div style={{ height: '3px', background: 'var(--color-surface-3)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{
+                        height: '100%',
+                        width: `${row.win_rate * 100}%`,
+                        borderRadius: '2px',
+                        background: row.win_rate > 0.5 ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                        transition: 'width 600ms cubic-bezier(0.22, 1, 0.36, 1)',
+                        opacity: hovered ? 1 : 0.6,
+                    }} />
                 </div>
             </div>
 
-            <div className="mt-10 text-xs font-mono tracking-widest text-dark-400 text-center uppercase opacity-50">
-                {t('leaderboard.footer')}
-            </div>
+            {/* Wins */}
+            <span style={{ textAlign: 'center', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--color-accent-b)' }}>
+                {row.wins}
+            </span>
+
+            {/* Total matches */}
+            <span style={{ textAlign: 'center', fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)' }}>
+                {row.total_matches}
+            </span>
         </div>
     );
 }
