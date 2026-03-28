@@ -8,3 +8,4 @@ langchain-openai
 sse-starlette
 pydantic
 python-dotenv
+httpx

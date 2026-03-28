@@ -8,45 +8,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 使用 trust_env=False 的 AsyncClient，避免读取系统 socks 代理导致初始化失败
-_async_client = httpx.AsyncClient(trust_env=False)
-
-# Ensure you have OPENAI_API_KEY or DASHSCOPE_API_KEY in your .env or environment
-# For this MVP, we define the pool of models available
-AVAILABLE_MODELS = {
-    "deepseek-v3": lambda: ChatOpenAI(
-        model="deepseek-ai/DeepSeek-V3", 
-        temperature=0.1, 
-        max_tokens=4096,
-        frequency_penalty=1.1,
-        presence_penalty=1.1,
-        base_url=os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"), 
-        api_key=os.getenv("SILICONFLOW_API_KEY"),
-        http_async_client=_async_client,
-    ),
-    "qwen2.5-72b": lambda: ChatOpenAI(
-        model="Qwen/Qwen2.5-72B-Instruct", 
-        temperature=0.1, 
-        max_tokens=4096,
-        frequency_penalty=1.1,
-        presence_penalty=1.1,
-        base_url=os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"), 
-        api_key=os.getenv("SILICONFLOW_API_KEY"),
-        http_async_client=_async_client,
-    ),
-}
-
+# Dynamic model builder — works with any SiliconFlow model ID
 _PROXY_KEYS = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
                "http_proxy", "https_proxy", "all_proxy"]
 
+
+def build_model(model_id: str) -> ChatOpenAI:
+    """Create a ChatOpenAI instance for any SiliconFlow model ID."""
+    return ChatOpenAI(
+        model=model_id,
+        temperature=0.1,
+        max_tokens=4096,
+        frequency_penalty=1.1,
+        presence_penalty=1.1,
+        base_url=os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"),
+        api_key=os.getenv("SILICONFLOW_API_KEY"),
+    )
+
+
 def get_model(model_name: str):
-    # 临时清除代理 env var，避免 openai SDK 在 Pydantic 校验时因 socks:// 报错
+    """Get a ChatOpenAI instance, temporarily clearing proxy env vars."""
     saved = {k: os.environ.pop(k) for k in _PROXY_KEYS if k in os.environ}
     try:
-        factory = AVAILABLE_MODELS.get(model_name) or next(iter(AVAILABLE_MODELS.values()))
-        return factory()
+        return build_model(model_name)
     finally:
-        os.environ.update(saved)  # 还原，不影响其他系统行为
+        os.environ.update(saved)
 
 async def astream_model_response(model_name: str, prompt: str, side: str, history: list = None):
     """

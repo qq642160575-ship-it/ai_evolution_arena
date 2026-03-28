@@ -90,10 +90,10 @@ function LeaderboardRow({ row, idx }: { row: any; idx: number }) {
                 alignItems: 'center',
                 padding: '14px 20px',
                 borderRadius: '12px',
-                border: `1px solid ${hovered ? 'rgba(129,140,248,0.18)' : 'var(--color-border)'}`,
+                border: `1px solid ${hovered ? 'var(--color-border-accent)' : 'var(--color-border)'}`,
                 background: hovered ? 'var(--color-surface-2)' : 'var(--color-surface)',
                 transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
-                boxShadow: hovered ? '0 4px 16px rgba(0,0,0,0.25)' : '0 1px 4px rgba(0,0,0,0.15)',
+                boxShadow: hovered ? 'var(--shadow-md)' : 'var(--shadow-sm)',
                 transition: 'transform 200ms ease-out, box-shadow 200ms ease-out, background 200ms ease-out, border-color 200ms ease-out',
                 cursor: 'default',
             }}
@@ -104,7 +104,7 @@ function LeaderboardRow({ row, idx }: { row: any; idx: number }) {
             </span>
 
             {/* Model name */}
-            <span style={{ fontSize: '14px', fontWeight: '500', color: hovered ? 'var(--color-text-primary)' : '#C8C8D2', transition: 'color 200ms ease-out', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '14px', fontWeight: '500', color: hovered ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', transition: 'color 200ms ease-out', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {row.model}
             </span>
 

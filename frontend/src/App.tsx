@@ -2,18 +2,40 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Arena from "./components/Arena";
 import Leaderboard from "./components/Leaderboard";
+import WelcomeModal, { ModelPoolPanel } from "./components/WelcomeModal";
+import { fetchModelPool } from "./lib/api";
+import type { ModelPoolItem } from "./lib/api";
 
 export default function App() {
   const [view, setView] = useState<'arena' | 'leaderboard'>('arena');
   const { t, i18n } = useTranslation();
   const [matchCount, setMatchCount] = useState<number>(0);
   const [showMission, setShowMission] = useState<boolean>(false);
+  const [poolModels, setPoolModels] = useState<ModelPoolItem[]>([]);
+  const [poolWeekLabel, setPoolWeekLabel] = useState<string>('');
+  const [poolCollapsed, setPoolCollapsed] = useState<boolean>(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const savedCount = localStorage.getItem('judged_matches');
     if (savedCount) setMatchCount(parseInt(savedCount));
     const hasSeenMission = localStorage.getItem('has_seen_mission');
     if (!hasSeenMission) setShowMission(true);
+
+    // Fetch model pool from backend
+    fetchModelPool()
+      .then((data) => {
+        setPoolModels(data.models || []);
+        setPoolWeekLabel(data.week_label || '');
+      })
+      .catch((e) => console.warn('Failed to fetch model pool:', e));
   }, []);
 
   const handleUpdateStats = () => {
@@ -62,24 +84,41 @@ export default function App() {
                 AI Arena
               </h1>
             </div>
-            <button
-              onClick={toggleLang}
-              style={{
-                fontSize: '10px',
-                fontFamily: 'var(--font-mono)',
-                padding: '3px 7px',
-                borderRadius: '6px',
-                border: '1px solid var(--color-border)',
-                background: 'transparent',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                transition: 'color 180ms ease-out, border-color 180ms ease-out',
-              }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--color-text-primary)'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--color-text-muted)'; }}
-            >
-              {i18n.language === 'en' ? 'EN' : '中'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleLang}
+                style={{
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  padding: '3px 7px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border)',
+                  background: 'transparent',
+                  color: 'var(--color-text-muted)',
+                  cursor: 'pointer',
+                  transition: 'color 180ms ease-out, border-color 180ms ease-out',
+                }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--color-text-primary)'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--color-text-muted)'; }}
+              >
+                {i18n.language === 'en' ? 'EN' : '中'}
+              </button>
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                title={t('theme.' + (theme === 'dark' ? 'light' : 'dark'))}
+                style={{
+                  fontSize: '10px',
+                  padding: '3px 7px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border)',
+                  background: 'transparent',
+                  color: 'var(--color-text-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -91,10 +130,14 @@ export default function App() {
           {([
             { id: 'arena', icon: '⚔', label: t('app.arena') },
             { id: 'leaderboard', icon: '≡', label: t('app.leaderboard') },
+            { id: 'intro', icon: '✨', label: i18n.language === 'zh' ? '网站介绍' : 'About' },
           ] as const).map(item => (
             <button
               key={item.id}
-              onClick={() => setView(item.id)}
+              onClick={() => {
+                if (item.id === 'intro') setShowMission(true);
+                else setView(item.id);
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -142,6 +185,14 @@ export default function App() {
             {t('app.slogan')}
           </p>
         </div>
+
+        {/* Model Pool (collapsible) */}
+        <ModelPoolPanel
+          models={poolModels}
+          weekLabel={poolWeekLabel}
+          collapsed={poolCollapsed}
+          onToggle={() => setPoolCollapsed(!poolCollapsed)}
+        />
       </aside>
 
       {/* ── Main Content ─────────────────────────────── */}
@@ -170,6 +221,12 @@ export default function App() {
             <button onClick={toggleLang} style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '2px 6px', borderRadius: '5px', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
               {i18n.language === 'en' ? 'EN' : '中'}
             </button>
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '5px', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
           </div>
         </header>
 
@@ -181,58 +238,13 @@ export default function App() {
         )}
       </main>
 
-      {/* ── Mission Overlay ───────────────────────────── */}
+      {/* ── Welcome Overlay ───────────────────────────── */}
       {showMission && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-fadeIn"
-          style={{ background: 'rgba(15,15,17,0.85)', backdropFilter: 'blur(24px)' }}
-        >
-          <div
-            className="w-full max-w-md space-y-8 text-center"
-            style={{
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '20px',
-              padding: '48px 40px',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-            }}
-          >
-            {/* Icon */}
-            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--color-accent-soft)', border: '1px solid rgba(129,140,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: '20px' }}>
-              ⚖️
-            </div>
-            <div className="space-y-3">
-              <h3 style={{ fontSize: '20px', fontFamily: 'var(--font-serif)', color: 'var(--color-text-primary)', fontWeight: '500', letterSpacing: '-0.01em' }}>
-                {t('onboarding.title')}
-              </h3>
-              <p style={{ fontSize: '13.5px', color: 'var(--color-text-secondary)', lineHeight: '1.7' }}>
-                {t('onboarding.body')}
-              </p>
-            </div>
-            <button
-              onClick={closeMission}
-              style={{
-                width: '100%',
-                padding: '13px',
-                borderRadius: '10px',
-                border: 'none',
-                background: 'var(--color-accent)',
-                color: '#fff',
-                fontSize: '12px',
-                fontWeight: '600',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'opacity 180ms ease-out',
-                fontFamily: 'var(--font-sans)',
-              }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '0.85'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '1'; }}
-            >
-              {t('onboarding.action')}
-            </button>
-          </div>
-        </div>
+        <WelcomeModal
+          onClose={closeMission}
+          models={poolModels}
+          weekLabel={poolWeekLabel}
+        />
       )}
     </div>
   );

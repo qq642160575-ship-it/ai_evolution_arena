@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import confetti from "canvas-confetti";
 import { useTranslation } from "react-i18next";
 import { submitStartSession, submitVote } from "../lib/api";
@@ -16,7 +19,7 @@ const PANEL_STYLE: React.CSSProperties = {
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',
     borderRadius: '16px',
-    boxShadow: '0 1px 16px rgba(0,0,0,0.35)',
+    boxShadow: 'var(--shadow-lg)',
     overflow: 'hidden',
 };
 
@@ -112,6 +115,14 @@ function CodeBlock({ children, ...props }: React.HTMLAttributes<HTMLPreElement>)
 
 const markdownComponents = { pre: CodeBlock };
 
+// ─── Math Preprocessor ────────────────────────────────────────────────────────
+const preprocessMath = (text: string) => {
+    if (!text) return text;
+    let processed = text.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
+    processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
+    return processed;
+};
+
 // ─── Model dot indicator ──────────────────────────────────────────────────────
 function ModelDot({ color }: { color: 'a' | 'b' }) {
     return (
@@ -205,8 +216,8 @@ function RevealOverlay({ revealData, voteSelection, onNewBattle, onLeaderboard }
     return (
         <div className="animate-fadeIn" style={{
             position: 'fixed', inset: 0, zIndex: 50,
-            background: 'rgba(15,15,17,0.92)',
-            backdropFilter: 'blur(24px)',
+            background: 'var(--color-overlay)',
+            backdropFilter: 'var(--color-overlay-blur)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px'
         }}>
             <div className="animate-slideUp" style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -319,8 +330,12 @@ function ModelPanel({ label, content, color, scrollHeight }: {
             <div style={{ overflowY: 'auto', height: scrollHeight }}>
                 {content ? (
                     <div style={{ padding: '20px 24px' }} className="markdown-body">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                            {content}
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                            components={markdownComponents}
+                        >
+                            {preprocessMath(content)}
                         </ReactMarkdown>
                     </div>
                 ) : (
@@ -569,7 +584,7 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                             )}
                             {/* Prompt bubble */}
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-                                <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: '14px', borderTopRightRadius: '4px', padding: '12px 18px', maxWidth: '82%', fontSize: '14px', color: 'var(--color-text-primary)', lineHeight: 1.65, boxShadow: '0 1px 8px rgba(0,0,0,0.2)' }}>
+                                <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: '14px', borderTopRightRadius: '4px', padding: '12px 18px', maxWidth: '82%', fontSize: '14px', color: 'var(--color-text-primary)', lineHeight: 1.65, boxShadow: 'var(--shadow-sm)' }}>
                                     {prompt}
                                 </div>
                             </div>
@@ -586,12 +601,25 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, var(--color-base) 60%, transparent)', paddingTop: '64px', paddingBottom: '28px', paddingLeft: '24px', paddingRight: '24px', zIndex: 40 }}>
                     <div style={{ maxWidth: '860px', margin: '0 auto' }}>
                         {isAwaitingVote ? (
-                            /* Vote button connected pill group */
-                            <div className="vote-group animate-slideUp">
-                                <button className="vote-btn accent-a" onClick={() => handleVote("left")}>{t('arena.alpha_wins')}</button>
-                                <button className="vote-btn" onClick={() => handleVote("both_good")} style={{ borderRight: '1px solid var(--color-border)' }}>{t('arena.mutual_tie')}</button>
-                                <button className="vote-btn" onClick={() => handleVote("both_bad")} style={{ borderRight: '1px solid var(--color-border)' }}>{t('arena.both_fail')}</button>
-                                <button className="vote-btn accent-b" onClick={() => handleVote("right")}>{t('arena.beta_wins')}</button>
+                            <div className="animate-slideUp" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <p style={{
+                                    fontSize: '12px',
+                                    color: 'var(--color-text-secondary)',
+                                    textAlign: 'center',
+                                    fontFamily: 'var(--font-serif)',
+                                    fontStyle: 'italic',
+                                    opacity: 0.9,
+                                    margin: 0
+                                }}>
+                                    {t('arena.reminder')}
+                                </p>
+                                {/* Vote button connected pill group */}
+                                <div className="vote-group">
+                                    <button className="vote-btn accent-a" onClick={() => handleVote("left")}>{t('arena.alpha_wins')}</button>
+                                    <button className="vote-btn" onClick={() => handleVote("both_good")} style={{ borderRight: '1px solid var(--color-border)' }}>{t('arena.mutual_tie')}</button>
+                                    <button className="vote-btn" onClick={() => handleVote("both_bad")} style={{ borderRight: '1px solid var(--color-border)' }}>{t('arena.both_fail')}</button>
+                                    <button className="vote-btn accent-b" onClick={() => handleVote("right")}>{t('arena.beta_wins')}</button>
+                                </div>
                             </div>
                         ) : (
                             <form
@@ -603,7 +631,7 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                                     backdropFilter: 'blur(20px)',
                                     border: '1px solid var(--color-border)',
                                     borderRadius: '14px',
-                                    boxShadow: '0 2px 24px rgba(0,0,0,0.3)',
+                                    boxShadow: 'var(--shadow-lg)',
                                     padding: '6px 6px 6px 16px',
                                     transition: 'border-color 200ms ease-out, box-shadow 200ms ease-out',
                                 }}

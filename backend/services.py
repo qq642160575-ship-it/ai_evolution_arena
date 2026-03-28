@@ -9,7 +9,8 @@ from fastapi import HTTPException
 
 import models
 import schemas
-from llm import astream_model_response, AVAILABLE_MODELS
+from llm import astream_model_response
+from model_pool import get_cached_models
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +19,25 @@ class BattleService:
         self.db = db
 
     async def start_battle(self) -> schemas.StartBattleResponse:
-        model_keys = list(AVAILABLE_MODELS.keys())
-        if len(model_keys) < 2:
-            model_a = model_b = "gpt-3.5-turbo"
+        models_in_pool = get_cached_models()
+        if len(models_in_pool) < 2:
+            raise HTTPException(status_code=503, detail="Model pool not ready, please try again later")
+            
+        # Group models by tier to ensure fair fights and similar TTFT speed
+        by_tier = {}
+        for m in models_in_pool:
+            by_tier.setdefault(m["tier"], []).append(m["id"])
+            
+        # Filter out tiers with less than 2 models available
+        valid_tiers = [t for t, ids in by_tier.items() if len(ids) >= 2]
+        
+        if not valid_tiers:
+            # Fallback (rare): if no single tier has at least 2 models, pick any 2
+            all_ids = [m["id"] for m in models_in_pool]
+            model_a, model_b = random.sample(all_ids, 2)
         else:
-            model_a, model_b = random.sample(model_keys, 2)
+            chosen_tier = random.choice(valid_tiers)
+            model_a, model_b = random.sample(by_tier[chosen_tier], 2)
         
         left_model, right_model = (model_a, model_b) if random.random() > 0.5 else (model_b, model_a)
         

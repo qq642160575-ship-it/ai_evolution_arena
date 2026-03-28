@@ -29,3 +29,24 @@ export async function fetchLeaderboard() {
     if (!res.ok) throw new Error('Failed to fetch leaderboard');
     return res.json();
 }
+
+export interface ModelPoolItem {
+    id: string;
+    display_name: string;
+    provider: string;
+    tier: 'flagship' | 'fast' | 'reasoning';
+}
+
+export interface ModelPoolResponse {
+    week_key: string;
+    week_label: string;
+    models: ModelPoolItem[];
+    all_count: number;
+    expires_at: string;
+}
+
+export async function fetchModelPool(): Promise<ModelPoolResponse> {
+    const res = await fetch(`${BASE_URL}/model-pool/`);
+    if (!res.ok) throw new Error('Failed to fetch model pool');
+    return res.json();
+}
