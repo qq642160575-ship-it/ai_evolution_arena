@@ -231,7 +231,7 @@ export default function App() {
           </div>
         </header>
 
-        {view === 'arena' && <Arena onNavigate={setView} onMatchComplete={handleUpdateStats} />}
+        {view === 'arena' && <Arena onNavigate={setView} onMatchComplete={handleUpdateStats} theme={theme} />}
         {view === 'leaderboard' && (
           <div className="overflow-y-auto h-full px-6 py-10 md:px-12 md:py-12 w-full">
             <Leaderboard />

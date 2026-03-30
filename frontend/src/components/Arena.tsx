@@ -5,6 +5,8 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import confetti from "canvas-confetti";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTranslation } from "react-i18next";
 import { submitStartSession, submitVote } from "../lib/api";
 import { config } from "../config";
@@ -88,39 +90,19 @@ function CopyButton({ text }: { text: string }) {
 }
 
 // ─── Code Block with Copy Button ─────────────────────────────────────────────
-function CodeBlock({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) {
-    const getCode = (): string => {
-        if (!children) return "";
-        const child = React.Children.toArray(children)[0] as any;
-        if (!child) return "";
-        const inner = child.props?.children || child.children;
-        if (typeof inner === "string") return inner;
-        if (Array.isArray(inner)) return inner.join("");
-        return "";
-    };
-
-    let lang = "";
-    if (children) {
-        const child = React.Children.toArray(children)[0] as any;
-        const className = child?.props?.className || child.className;
-        if (className) {
-            const match = /language-(\w+)/.exec(className);
-            if (match) lang = match[1];
-        }
-    }
-
+function CodeBlock({ lang, children, theme }: { lang: string, children: string, theme: 'light' | 'dark' }) {
     const [hovered, setHovered] = useState(false);
     return (
         <div
             style={{
                 position: 'relative',
-                background: '#1e1e24',
+                background: theme === 'dark' ? '#1e1e1e' : '#f8f9fa',
                 borderRadius: '8px',
                 margin: '16px 0',
                 border: '1px solid var(--color-border)',
                 overflow: 'hidden',
                 maxWidth: '100%',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                boxShadow: theme === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.04)',
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
@@ -129,9 +111,9 @@ function CodeBlock({ children, ...props }: React.HTMLAttributes<HTMLPreElement>)
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                background: '#2d2d34',
+                background: theme === 'dark' ? '#2d2d34' : '#f1f3f5',
                 padding: '6px 12px',
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                borderBottom: '1px solid var(--color-border-soft)',
             }}>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f56' }} />
@@ -142,31 +124,33 @@ function CodeBlock({ children, ...props }: React.HTMLAttributes<HTMLPreElement>)
                     </span>
                 </div>
                 <div style={{ opacity: hovered ? 1 : 0, transition: 'opacity 180ms ease-out' }}>
-                    <CopyButton text={getCode()} />
+                    <CopyButton text={children} />
                 </div>
             </div>
-            <div style={{ overflowX: 'auto', maxWidth: '100%', padding: '16px' }}>
-                <pre
-                    {...props}
-                    style={{
-                        margin: 0,
-                        fontSize: '13px',
-                        fontFamily: 'var(--font-mono)',
-                        color: '#d4d4d8',
-                        lineHeight: 1.6,
-                        background: 'transparent',
-                        whiteSpace: 'pre',
-                        ...props.style
-                    }}
+            <div style={{ maxWidth: '100%' }}>
+                <SyntaxHighlighter
+                    language={lang || 'text'}
+                    style={theme === 'dark' ? vscDarkPlus : prism}
+                    customStyle={{ margin: 0, padding: '16px', fontSize: '13px', lineHeight: '1.45', background: 'transparent' }}
+                    wrapLongLines={true}
                 >
                     {children}
-                </pre>
+                </SyntaxHighlighter>
             </div>
         </div>
     );
 }
 
-const markdownComponents = { pre: CodeBlock };
+const getMarkdownComponents = (theme: 'light' | 'dark') => ({
+    code(props: any) {
+        const { children, className, node, ...rest } = props;
+        const match = /language-(\w+)/.exec(className || '');
+        if (match) {
+            return <CodeBlock lang={match[1]} theme={theme}>{String(children).replace(/\n$/, '')}</CodeBlock>;
+        }
+        return <code className={className} style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: '4px', fontSize: '0.9em', fontFamily: 'var(--font-mono)' }} {...rest}>{children}</code>;
+    }
+});
 
 // ─── Math Preprocessor ────────────────────────────────────────────────────────
 const preprocessMath = (text: string) => {
@@ -360,9 +344,35 @@ function RevealOverlay({ revealData, voteSelection, onNewBattle, onLeaderboard }
 }
 
 // ─── Markdown Panel ───────────────────────────────────────────────────────────
-function ModelPanel({ label, content, color, scrollHeight }: {
-    label: string; content: string; color: 'a' | 'b'; scrollHeight: string;
+function ModelPanel({ label, content, reasoning, color, scrollHeight, theme }: {
+    label: string; content: string; reasoning?: string; color: 'a' | 'b'; scrollHeight: string; theme: 'light' | 'dark';
 }) {
+    let displayContent = content || "";
+    let displayReasoning = reasoning || "";
+
+    // Extract all fully closed <think>...</think> blocks
+    const thinkRegex = /<think>([\s\S]*?)<\/think>/gi;
+    let match;
+    while ((match = thinkRegex.exec(displayContent)) !== null) {
+        displayReasoning += (displayReasoning ? "\n\n" : "") + match[1].trim();
+    }
+    // Remove closed blocks from content
+    displayContent = displayContent.replace(/<think>[\s\S]*?<\/think>/gi, '');
+
+    // Check for unclosed <think> block at the end (indicates streaming in progress)
+    const unclosedThinkIndex = displayContent.lastIndexOf('<think>');
+    if (unclosedThinkIndex !== -1) {
+        displayReasoning += (displayReasoning ? "\n\n" : "") + displayContent.substring(unclosedThinkIndex + 7).trim();
+        displayContent = displayContent.substring(0, unclosedThinkIndex);
+    } else if (!displayReasoning && displayContent.indexOf('</think>') !== -1) {
+        // Edge case: closing tag exists without an opening tag (sometimes happens in flawed streams)
+        const closeIndex = displayContent.indexOf('</think>');
+        displayReasoning = displayContent.substring(0, closeIndex).trim();
+        displayContent = displayContent.substring(closeIndex + 8);
+    }
+
+    displayContent = displayContent.trim();
+
     return (
         <div style={PANEL_STYLE}>
             <div style={PANEL_HEADER_STYLE}>
@@ -381,18 +391,30 @@ function ModelPanel({ label, content, color, scrollHeight }: {
                 {content && <CopyButton text={content} />}
             </div>
             <div style={{ overflowY: 'auto', height: scrollHeight }}>
-                {content ? (
-                    <div style={{ padding: '20px 24px' }} className="markdown-body">
-                        <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                            components={markdownComponents}
-                        >
-                            {preprocessMath(content)}
-                        </ReactMarkdown>
-                    </div>
-                ) : (
+                {(!displayContent && !displayReasoning) ? (
                     <ShimmerLoader />
+                ) : (
+                    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {displayReasoning && (
+                           <div style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: color === 'a' ? '3px solid var(--color-accent)' : '3px solid var(--color-accent-b)' }}>
+                              <p style={{ margin: 0, fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginBottom: '8px', textTransform: 'uppercase' }}>Thinking Process</p>
+                              <div style={{ fontSize: '12.5px', color: 'var(--color-text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
+                                 {displayReasoning}
+                              </div>
+                           </div>
+                        )}
+                        {displayContent && (
+                           <div className="markdown-body">
+                               <ReactMarkdown
+                                   remarkPlugins={[remarkGfm, remarkMath]}
+                                   rehypePlugins={[rehypeKatex]}
+                                   components={getMarkdownComponents(theme)}
+                               >
+                                   {preprocessMath(displayContent)}
+                               </ReactMarkdown>
+                           </div>
+                        )}
+                    </div>
                 )}
             </div>
         </div>
@@ -400,9 +422,10 @@ function ModelPanel({ label, content, color, scrollHeight }: {
 }
 
 // ─── Main Arena ───────────────────────────────────────────────────────────────
-export default function Arena({ onNavigate, onMatchComplete }: {
+export default function Arena({ onNavigate, onMatchComplete, theme }: {
     onNavigate: (view: 'arena' | 'leaderboard') => void;
     onMatchComplete: () => void;
+    theme: 'light' | 'dark';
 }) {
     const { t } = useTranslation();
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -414,8 +437,10 @@ export default function Arena({ onNavigate, onMatchComplete }: {
     const [voteSelection, setVoteSelection] = useState<string | null>(null);
     const [responseA, setResponseA] = useState<string>("");
     const [responseB, setResponseB] = useState<string>("");
+    const [reasoningA, setReasoningA] = useState<string>("");
+    const [reasoningB, setReasoningB] = useState<string>("");
     const [conversationHistory, setConversationHistory] = useState<Array<{
-        turnNumber: number; prompt: string; responseA: string; responseB: string;
+        turnNumber: number; prompt: string; responseA: string; responseB: string; reasoningA?: string; reasoningB?: string;
     }>>([]);
     const [revealData, setRevealData] = useState<any>(null);
 
@@ -449,7 +474,7 @@ export default function Arena({ onNavigate, onMatchComplete }: {
     };
 
     const resetArena = () => {
-        setPrompt(""); setResponseA(""); setResponseB("");
+        setPrompt(""); setResponseA(""); setResponseB(""); setReasoningA(""); setReasoningB("");
         setIsGenerating(false); setIsAwaitingVote(false); setVoteSelection(null);
     };
 
@@ -457,7 +482,7 @@ export default function Arena({ onNavigate, onMatchComplete }: {
         e.preventDefault();
         if (!prompt.trim() || !sessionId || isGenerating || isAwaitingVote) return;
         setIsGenerating(true);
-        setResponseA(""); setResponseB("");
+        setResponseA(""); setResponseB(""); setReasoningA(""); setReasoningB("");
         try {
             const response = await fetch(`${BASE_URL}/battle/chat/`, {
                 method: 'POST',
@@ -484,8 +509,13 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                                     if (doneA && doneB) { bothDone = true; break; }
                                     continue;
                                 }
-                                if (data.model === 'A' && data.chunk) setResponseA(prev => prev + data.chunk);
-                                else if (data.model === 'B' && data.chunk) setResponseB(prev => prev + data.chunk);
+                                if (data.model === 'A') {
+                                    if (data.chunk) setResponseA(prev => prev + data.chunk);
+                                    if (data.reasoning_chunk) setReasoningA(prev => prev + data.reasoning_chunk);
+                                } else if (data.model === 'B') {
+                                    if (data.chunk) setResponseB(prev => prev + data.chunk);
+                                    if (data.reasoning_chunk) setReasoningB(prev => prev + data.reasoning_chunk);
+                                }
                             } catch { }
                         }
                     }
@@ -510,7 +540,7 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                 onMatchComplete();
                 if (voteResult !== 'both_bad') setTimeout(() => triggerCelebration(), 800);
             } else {
-                setConversationHistory(prev => [...prev, { turnNumber: turn, prompt, responseA, responseB }]);
+                setConversationHistory(prev => [...prev, { turnNumber: turn, prompt, responseA, responseB, reasoningA, reasoningB }]);
                 setTurn(resp.current_turn + 1);
                 resetArena();
             }
@@ -619,8 +649,8 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                             </div>
                             {/* History panels — always side by side */}
                             <div style={{ display: 'flex', gap: '12px', flexDirection: 'row', minWidth: 0 }}>
-                                <ModelPanel label={t('arena.entity_a')} content={histTurn.responseA} color="a" scrollHeight="36vh" />
-                                <ModelPanel label={t('arena.entity_b')} content={histTurn.responseB} color="b" scrollHeight="36vh" />
+                                <ModelPanel label={t('arena.entity_a')} content={histTurn.responseA} reasoning={histTurn.reasoningA} color="a" scrollHeight="36vh" theme={theme} />
+                                <ModelPanel label={t('arena.entity_b')} content={histTurn.responseB} reasoning={histTurn.reasoningB} color="b" scrollHeight="36vh" theme={theme} />
                             </div>
                         </div>
                     ))}
@@ -643,8 +673,8 @@ export default function Arena({ onNavigate, onMatchComplete }: {
                             </div>
                             {/* Current panels — always side by side */}
                             <div style={{ display: 'flex', gap: '16px', flexDirection: 'row', minWidth: 0 }}>
-                                <ModelPanel label={t('arena.entity_a')} content={responseA} color="a" scrollHeight="58vh" />
-                                <ModelPanel label={t('arena.entity_b')} content={responseB} color="b" scrollHeight="58vh" />
+                                <ModelPanel label={t('arena.entity_a')} content={responseA} reasoning={reasoningA} color="a" scrollHeight="58vh" theme={theme} />
+                                <ModelPanel label={t('arena.entity_b')} content={responseB} reasoning={reasoningB} color="b" scrollHeight="58vh" theme={theme} />
                             </div>
                         </div>
                     )}
