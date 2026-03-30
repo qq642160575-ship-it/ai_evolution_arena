@@ -6,16 +6,16 @@ const resources = {
   en: {
     translation: {
       "app": {
-        "title": "AI ARENA",
+        "title": "APEX",
         "protocol": "Protocol",
-        "arena": "Blind Test Arena",
+        "arena": "Blind Test",
         "leaderboard": "Global Nexus",
         "slogan": "\"Neutral. Objective. Evolution through blind elimination.\"",
-        "arena_m": "Arena",
+        "arena_m": "Apex",
         "nexus_m": "Nexus"
       },
       "arena": {
-        "title": "The Nexus Arena",
+        "title": "The Apex Nexus",
         "subtitle": "Two elite models. One secret protocol. Your judgment decides the evolution.",
         "initiate": "Initiate Combat",
         "placeholder": "Send a prompt to both entities...",
@@ -63,8 +63,8 @@ const resources = {
           "pool": "Model Pool"
         },
         "intro": {
-          "title": "Welcome to AI Arena",
-          "body": "AI Arena is a blind evaluation platform where you judge AI models without knowing their identity. Your votes shape the weekly leaderboard and reveal which models truly excel.",
+          "title": "Welcome to Apex",
+          "body": "Apex is a blind evaluation platform where you judge AI models without knowing their identity. Your votes shape the weekly leaderboard and reveal which models truly excel.",
           "feat_blind_title": "100% Blind Testing",
           "feat_blind_desc": "All models are anonymised. Judge only by the quality of responses — no brand bias.",
           "feat_rank_title": "Community Leaderboard",
@@ -91,7 +91,7 @@ const resources = {
         },
         "action": {
           "next": "Next →",
-          "enter": "Enter the Arena"
+          "enter": "Enter Apex"
         }
       },
       "leaderboard": {
@@ -111,16 +111,16 @@ const resources = {
   zh: {
     translation: {
       "app": {
-        "title": "AI 进化竞技场",
+        "title": "Apex 进化测试",
         "protocol": "评测协议",
-        "arena": "盲测竞技场",
+        "arena": "盲测终端",
         "leaderboard": "全服排行榜",
         "slogan": "“中立。客观。通过盲选进化。”",
-        "arena_m": "竞技场",
-        "nexus_m": "排行榜"
+        "arena_m": "测算",
+        "nexus_m": "榜单"
       },
       "arena": {
-        "title": "枢纽竞技场",
+        "title": "Apex 枢纽系统",
         "subtitle": "两个顶尖模型，一个加密协议。你的判断决定 AI 的进化。",
         "initiate": "启动对战协议",
         "placeholder": "向两个实体发送指令...",
@@ -159,7 +159,7 @@ const resources = {
       "onboarding": {
         "title": "核心使命",
         "body": "你的直觉是唯一的过滤器。通过剥离这些匿名实体的外壳，你正在直接修正下一代人工智能的逻辑分支。中立、精准、至关重要。",
-        "action": "进入竞技场"
+        "action": "进入 Apex"
       },
       "welcome": {
         "step_label": {
@@ -168,8 +168,8 @@ const resources = {
           "pool": "本周模型池"
         },
         "intro": {
-          "title": "欢迎来到 AI 进化竞技场",
-          "body": "AI Arena 是一个盲测评估平台，你将在不知道模型身份的情况下对 AI 进行打分。你的投票将实时汇入全服天梯榜，揭示哪些模型真正出类拔萃。",
+          "title": "欢迎来到 Apex",
+          "body": "Apex 是一个盲测评估平台，你将在不知道模型身份的情况下对 AI 进行打分。你的投票将实时汇入全服天梯榜，揭示哪些模型真正出类拔萃。",
           "feat_blind_title": "100% 盲测机制",
           "feat_blind_desc": "所有模型均匿名出战，只凭答案质量判断，杜绝品牌偏见。",
           "feat_rank_title": "社区实时排行榜",
@@ -196,7 +196,7 @@ const resources = {
         },
         "action": {
           "next": "下一步 →",
-          "enter": "进入竞技场"
+          "enter": "进入 Apex"
         }
       },
       "leaderboard": {

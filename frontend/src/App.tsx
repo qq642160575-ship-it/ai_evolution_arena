@@ -82,7 +82,7 @@ export default function App() {
                 <div className="absolute inset-[3px] rounded-sm" style={{ background: 'var(--color-accent)' }} />
               </div>
               <h1 className="font-semibold tracking-tight" style={{ fontSize: '14px', color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
-                AI Arena
+                Apex
               </h1>
             </div>
             <div className="flex items-center gap-2">
@@ -208,7 +208,7 @@ export default function App() {
               <div className="absolute inset-0 rounded" style={{ background: 'var(--color-accent)', opacity: 0.15 }} />
               <div className="absolute inset-[2px] rounded-sm" style={{ background: 'var(--color-accent)' }} />
             </div>
-            <h1 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>AI Arena</h1>
+            <h1 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>Apex</h1>
           </div>
           <div className="flex items-center gap-4">
             <button
