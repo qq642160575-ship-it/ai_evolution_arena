@@ -4,24 +4,58 @@ import { fetchLeaderboard } from "../lib/api";
 
 const MEDAL: Record<number, string> = { 0: '🥇', 1: '🥈', 2: '🥉' };
 
+const DOMAINS = [
+    { value: '', label: '🏆 综合排行' },
+    { value: 'coding', label: '💻 代码' },
+    { value: 'logic', label: '🧠 逻辑' },
+    { value: 'creative', label: '✍️ 创作' },
+    { value: 'instruction', label: '🎯 指令' },
+    { value: 'general', label: '💬 问答' }
+];
+
 export default function Leaderboard() {
     const { t } = useTranslation();
     const [data, setData] = useState<any[]>([]);
+    const [category, setCategory] = useState<string>('');
 
     useEffect(() => {
-        fetchLeaderboard().then(res => setData(res.leaderboard)).catch(console.error);
-    }, []);
+        fetchLeaderboard(category).then(res => setData(res.leaderboard)).catch(console.error);
+    }, [category]);
 
     return (
         <div style={{ width: '100%', maxWidth: '860px', margin: '0 auto' }} className="animate-fadeIn">
             {/* Header */}
-            <div style={{ marginBottom: '40px' }}>
+            <div style={{ marginBottom: '24px' }}>
                 <h2 style={{ fontSize: '26px', fontFamily: 'var(--font-serif)', fontWeight: '500', color: 'var(--color-text-primary)', letterSpacing: '-0.02em', marginBottom: '8px' }}>
                     {t('leaderboard.title')}
                 </h2>
                 <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
                     {t('leaderboard.subtitle')}
                 </p>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="hide-scrollbar" style={{ display: 'flex', gap: '8px', marginBottom: '32px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {DOMAINS.map(d => (
+                    <button
+                        key={d.value}
+                        onClick={() => setCategory(d.value)}
+                        style={{
+                            padding: '6px 16px',
+                            borderRadius: '999px',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 200ms ease',
+                            background: category === d.value ? 'var(--color-text-primary)' : 'transparent',
+                            color: category === d.value ? 'var(--color-surface)' : 'var(--color-text-secondary)',
+                            border: `1px solid ${category === d.value ? 'var(--color-text-primary)' : 'var(--color-border)'}`,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {d.label}
+                    </button>
+                ))}
             </div>
 
             {/* Column labels */}

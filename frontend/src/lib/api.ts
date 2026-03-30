@@ -24,9 +24,16 @@ export async function submitVote(sessionId: string, voteResult: string, prompt: 
     return res.json();
 }
 
-export async function fetchLeaderboard() {
-    const res = await fetch(`${BASE_URL}/report/leaderboard/`);
+export async function fetchLeaderboard(category?: string) {
+    const url = category ? `${BASE_URL}/report/leaderboard/?category=${category}` : `${BASE_URL}/report/leaderboard/`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch leaderboard');
+    return res.json();
+}
+
+export async function fetchStats() {
+    const res = await fetch(`${BASE_URL}/stats/`);
+    if (!res.ok) throw new Error('Failed to fetch stats');
     return res.json();
 }
 

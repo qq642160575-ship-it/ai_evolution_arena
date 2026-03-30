@@ -91,24 +91,77 @@ function CopyButton({ text }: { text: string }) {
 function CodeBlock({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) {
     const getCode = (): string => {
         if (!children) return "";
-        const child = React.Children.toArray(children)[0] as React.ReactElement<{ children?: React.ReactNode }>;
+        const child = React.Children.toArray(children)[0] as any;
         if (!child) return "";
-        const inner = child.props?.children;
+        const inner = child.props?.children || child.children;
         if (typeof inner === "string") return inner;
         if (Array.isArray(inner)) return inner.join("");
         return "";
     };
+
+    let lang = "";
+    if (children) {
+        const child = React.Children.toArray(children)[0] as any;
+        const className = child?.props?.className || child.className;
+        if (className) {
+            const match = /language-(\w+)/.exec(className);
+            if (match) lang = match[1];
+        }
+    }
+
     const [hovered, setHovered] = useState(false);
     return (
         <div
-            style={{ position: 'relative' }}
+            style={{
+                position: 'relative',
+                background: '#1e1e24',
+                borderRadius: '8px',
+                margin: '16px 0',
+                border: '1px solid var(--color-border)',
+                overflow: 'hidden',
+                maxWidth: '100%',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+            }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            <div style={{ position: 'absolute', top: '8px', right: '8px', opacity: hovered ? 1 : 0, transition: 'opacity 180ms ease-out', zIndex: 10 }}>
-                <CopyButton text={getCode()} />
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#2d2d34',
+                padding: '6px 12px',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+            }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f56' }} />
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ffbd2e' }} />
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#27c93f' }} />
+                    <span style={{ marginLeft: '8px', color: '#a0a0ab', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {lang || "Code"}
+                    </span>
+                </div>
+                <div style={{ opacity: hovered ? 1 : 0, transition: 'opacity 180ms ease-out' }}>
+                    <CopyButton text={getCode()} />
+                </div>
             </div>
-            <pre {...props}>{children}</pre>
+            <div style={{ overflowX: 'auto', maxWidth: '100%', padding: '16px' }}>
+                <pre
+                    {...props}
+                    style={{
+                        margin: 0,
+                        fontSize: '13px',
+                        fontFamily: 'var(--font-mono)',
+                        color: '#d4d4d8',
+                        lineHeight: 1.6,
+                        background: 'transparent',
+                        whiteSpace: 'pre',
+                        ...props.style
+                    }}
+                >
+                    {children}
+                </pre>
+            </div>
         </div>
     );
 }

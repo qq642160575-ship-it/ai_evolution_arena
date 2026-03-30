@@ -18,6 +18,9 @@ class BattleSession(Base):
     
     history = Column(JSON, default=list)
 
+    # 领域标签字段 (coding, logic, creative, instruction, general)
+    domain_category = Column(String, default="general", index=True)
+
 class EvaluationRecord(Base):
     __tablename__ = "evaluation_records"
 

@@ -5,6 +5,7 @@ import Leaderboard from "./components/Leaderboard";
 import WelcomeModal, { ModelPoolPanel } from "./components/WelcomeModal";
 import { fetchModelPool } from "./lib/api";
 import type { ModelPoolItem } from "./lib/api";
+import StatsWidget from "./components/StatsWidget";
 
 export default function App() {
   const [view, setView] = useState<'arena' | 'leaderboard'>('arena');
@@ -246,6 +247,8 @@ export default function App() {
           weekLabel={poolWeekLabel}
         />
       )}
+      {/* Live Stats Widget */}
+      <StatsWidget />
     </div>
   );
 }

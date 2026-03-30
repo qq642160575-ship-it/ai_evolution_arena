@@ -9,7 +9,8 @@ from fastapi import HTTPException
 
 import models
 import schemas
-from llm import astream_model_response
+from llm import astream_model_response, classify_intent
+from database import SessionLocal
 from model_pool import get_cached_models
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,24 @@ class BattleService:
     async def generate_chat_stream(self, session, prompt: str):
         queue = asyncio.Queue()
         session_history = session.history or {"A": [], "B": []}
+        
+        is_first_turn = not bool(session_history.get("A", [])) if isinstance(session_history, dict) else True
+        if is_first_turn:
+            async def run_classifier(sess_id, user_prompt):
+                try:
+                    category = await classify_intent(user_prompt)
+                    async with SessionLocal() as db_session:
+                        result = await db_session.execute(
+                            select(models.BattleSession).where(models.BattleSession.id == sess_id)
+                        )
+                        s = result.scalar_one_or_none()
+                        if s:
+                            s.domain_category = category
+                            await db_session.commit()
+                except Exception as e:
+                    logger.error(f"Intent classifier task error: {e}")
+            
+            asyncio.create_task(run_classifier(session.id, prompt))
         
         async def run_stream(side, model_name):
             try:
@@ -164,7 +183,7 @@ class BattleService:
             await self.db.commit()
             return schemas.VoteResponse(is_completed=False, current_turn=new_turn)
 
-    async def get_leaderboard(self):
+    async def get_leaderboard(self, category: str = None):
         stmt = (
             select(
                 models.BattleSession.model_a,
@@ -174,11 +193,15 @@ class BattleService:
             )
             .select_from(models.EvaluationRecord)
             .join(models.BattleSession)
-            .group_by(
-                models.BattleSession.model_a,
-                models.BattleSession.model_b,
-                models.EvaluationRecord.vote_result
-            )
+        )
+        
+        if category:
+            stmt = stmt.where(models.BattleSession.domain_category == category)
+            
+        stmt = stmt.group_by(
+            models.BattleSession.model_a,
+            models.BattleSession.model_b,
+            models.EvaluationRecord.vote_result
         )
         
         result = await self.db.execute(stmt)

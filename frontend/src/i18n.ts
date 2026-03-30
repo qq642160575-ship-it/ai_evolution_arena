@@ -43,7 +43,9 @@ const resources = {
           "novice": "Novice",
           "sentinel": "Sentinel",
           "sage": "Sage"
-        }
+        },
+        "online_users": "Online:",
+        "total_battles": "Battles:"
       },
       "theme": {
         "light": "Light Mode",
@@ -146,7 +148,9 @@ const resources = {
           "novice": "初学者",
           "sentinel": "守护者",
           "sage": "智者"
-        }
+        },
+        "online_users": "当前在线:",
+        "total_battles": "总对局数:"
       },
       "theme": {
         "light": "浅色模式",
